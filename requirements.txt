@@ -1,0 +1,11 @@
+coreapi==2.0.8
+Django==1.10.2
+django-crispy-forms==1.6.1
+django-filter==0.15.3
+django-guardian==1.4.6
+djangorestframework==3.5.1
+itypes==1.1.0
+Markdown==2.6.7
+requests==2.11.1
+six==1.10.0
+uritemplate==3.0.0
