@@ -33,3 +33,18 @@ class BeaconSerializer(serializers.ModelSerializer):
     class Meta:
         model = Beacon
         fields = ('id', 'uuid', 'major', 'minor', 'room')
+
+
+class StudentDeserializer(serializers.Serializer):
+    username = serializers.CharField(max_length=140, required=True)
+    password = serializers.CharField(required=True)
+
+    @staticmethod
+    def validate_username(value: str) -> str:
+        if not len(value) > 0:
+            raise serializers.ValidationError("Username cannot be empty")
+
+        if not (value[:-1].isdigit() and value[-1].isalpha()):
+            raise serializers.ValidationError("Username not in correct format")
+
+        return value

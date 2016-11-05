@@ -99,7 +99,7 @@ class AttendanceRecord(models.Model):
     student = models.ForeignKey('Student', related_name='attendance_records')
 
 
-class ShuffledIDs(models.Model):
+class ShuffledID(models.Model):
     uuid = models.UUIDField()
     major = models.IntegerField()
     minor = models.IntegerField()
@@ -108,3 +108,4 @@ class ShuffledIDs(models.Model):
 
     class Meta:
         unique_together = ('uuid', 'major', 'minor')
+        verbose_name = 'Shuffled ID'
