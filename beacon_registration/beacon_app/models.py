@@ -51,8 +51,8 @@ class Room(models.Model):
 
 class Class(models.Model):
     class_code = models.CharField(unique=True, max_length=140)
-    demonstrators = models.ManyToManyField('Demonstrator')
-    students = models.ManyToManyField('Student')
+    demonstrators = models.ManyToManyField('Demonstrator', blank=True)
+    students = models.ManyToManyField('Student', blank=True)
 
     class Meta:
         verbose_name_plural = 'Classes'

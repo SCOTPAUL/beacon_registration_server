@@ -10,9 +10,11 @@ from rest_framework.authentication import TokenAuthentication
 # http://stackoverflow.com/questions/14567586/token-authentication-for-restful-api-should-the-token-be-periodically-changed
 class ExpiringTokenAuthentication(TokenAuthentication):
     def authenticate_credentials(self, key):
+        model = self.get_model()
+
         try:
-            token = self.model.objects.get(key=key)
-        except self.model.DoesNotExist:
+            token = model.objects.select_related('user').get(key=key)
+        except model.DoesNotExist:
             raise exceptions.AuthenticationFailed('Invalid token')
 
         if not token.user.is_active:

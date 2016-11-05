@@ -1,35 +1,21 @@
 from rest_framework import serializers
 
-from .models import Room, Beacon, Building
+from .models import Room, Beacon, Building, Class, Meeting, Student
 
 
-class BuildingSerializer(serializers.ModelSerializer):
-    rooms = serializers.HyperlinkedRelatedField(many=True,
-                                                read_only=True,
-                                                view_name='room-detail')
-
+class BuildingSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Building
         fields = ('id', 'building_name', 'rooms')
 
 
-class RoomSerializer(serializers.ModelSerializer):
-    building = serializers.HyperlinkedRelatedField(many=False,
-                                                   read_only=True,
-                                                   view_name='building-detail')
-
-    beacons = serializers.HyperlinkedRelatedField(many=True,
-                                                  read_only=True,
-                                                  view_name='beacon-detail')
-
+class RoomSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Room
         fields = ('id', 'room_code', 'beacons', 'building')
 
 
-class BeaconSerializer(serializers.ModelSerializer):
-    room = serializers.HyperlinkedRelatedField(many=False, read_only=True, view_name='room-detail')
-
+class BeaconSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Beacon
         fields = ('id', 'uuid', 'major', 'minor', 'room')
@@ -48,3 +34,25 @@ class StudentDeserializer(serializers.Serializer):
             raise serializers.ValidationError("Username not in correct format")
 
         return value
+
+
+class MeetingSerializer(serializers.HyperlinkedModelSerializer):
+    day_of_week = serializers.CharField(source='weekday')
+
+    class Meta:
+        model = Meeting
+        fields = ('time_start', 'time_end', 'day_of_week', 'date_start', 'date_end', 'room', 'class_rel')
+
+
+class ClassSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Class
+        fields = ('class_code', 'meetings')
+
+
+class StudentSerializer(serializers.HyperlinkedModelSerializer):
+    username = serializers.CharField(source='user.username')
+
+    class Meta:
+        model = Student
+        fields = ('username', 'classes')
