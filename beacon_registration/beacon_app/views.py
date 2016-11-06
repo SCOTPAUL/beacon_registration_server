@@ -34,7 +34,7 @@ class TokenViewSet(viewsets.ViewSet):
     queryset = Token.objects.all()
     serializer_class = StudentDeserializer
 
-    def create(self, request):
+    def create(self, request, format=None):
         serializer = StudentDeserializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.data
