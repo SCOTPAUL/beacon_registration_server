@@ -36,12 +36,27 @@ class StudentDeserializer(serializers.Serializer):
         return value
 
 
-class MeetingSerializer(serializers.HyperlinkedModelSerializer):
+class ReservedNameHyperlinkedModelSerializer(serializers.HyperlinkedModelSerializer):
+    """Allows the usage of reserved fieldnames by appending a '_' to the field name in a subclass"""
+
+    def __init__(self, *args, **kwargs):
+        super(ReservedNameHyperlinkedModelSerializer, self).__init__(*args, **kwargs)
+
+        fields = self.fields
+
+        for field_name in fields:
+            if field_name.endswith("_"):
+                fields[field_name[:-1]] = fields.pop(field_name)
+
+
+class MeetingSerializer(ReservedNameHyperlinkedModelSerializer):
     day_of_week = serializers.CharField(source='weekday')
+    class_ = serializers.HyperlinkedRelatedField(source='class_rel', view_name='class-detail', many=False,
+                                                 read_only=True)
 
     class Meta:
         model = Meeting
-        fields = ('time_start', 'time_end', 'day_of_week', 'date_start', 'date_end', 'room', 'class_rel')
+        fields = ('time_start', 'time_end', 'day_of_week', 'date_start', 'date_end', 'room', 'class_')
 
 
 class ClassSerializer(serializers.HyperlinkedModelSerializer):
