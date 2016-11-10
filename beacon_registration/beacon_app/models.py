@@ -1,15 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
 
-
-class Demonstrator(models.Model):
-    user = models.OneToOneField(User)
-    classes = models.ManyToManyField('Class', blank=True)
-
-    def __str__(self):
-        return self.user.username
-
-
 class Student(models.Model):
     user = models.OneToOneField(User)
     classes = models.ManyToManyField('Class', blank=True)
@@ -51,7 +42,6 @@ class Room(models.Model):
 
 class Class(models.Model):
     class_code = models.CharField(unique=True, max_length=140)
-    demonstrators = models.ManyToManyField('Demonstrator', blank=True)
     students = models.ManyToManyField('Student', blank=True)
 
     class Meta:
@@ -61,8 +51,16 @@ class Class(models.Model):
         return self.class_code
 
 
+class MeetingInstance(models.Model):
+    date = models.DateField()
+    meeting = models.ForeignKey('Meeting', related_name='instances')
+    room = models.ForeignKey('Room', related_name='meeting_instances')
+
+    def __str__(self):
+        return '{} in room {} on {}'.format(self.meeting, self.room, self.date)
+
 class Meeting(models.Model):
-    _WEEKDAY_STRINGS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    _WEEKDAY_STRINGS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
     WEEKDAY_CHOICES = (
         enumerate(_WEEKDAY_STRINGS)
@@ -72,30 +70,22 @@ class Meeting(models.Model):
     time_end = models.TimeField()
     day_of_week = models.IntegerField(choices=WEEKDAY_CHOICES)
 
-    date_start = models.DateField()
-    date_end = models.DateField()
-
-    room = models.ForeignKey('Room', related_name='meetings')
     class_rel = models.ForeignKey('Class', related_name='meetings', verbose_name='Class')
 
     def weekday(self):
         return self._WEEKDAY_STRINGS[int(self.day_of_week)]
 
     def __str__(self):
-        return '{} at {}-{}, from {} to {}, Room {} for Class {}'.format(
+        return '{} at {}-{} for {}'.format(
             self.weekday(),
             self.time_start,
             self.time_end,
-            self.date_start,
-            self.date_end,
-            self.room,
             self.class_rel.class_code
         )
 
 
 class AttendanceRecord(models.Model):
-    date = models.DateField()
-    meeting = models.ForeignKey('Meeting', related_name='attendance_records')
+    meeting_instance = models.ForeignKey('MeetingInstance', related_name='attendance_records')
     student = models.ForeignKey('Student', related_name='attendance_records')
 
 

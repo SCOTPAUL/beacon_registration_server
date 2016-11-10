@@ -5,7 +5,7 @@ from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import AllowAny, IsAuthenticated, DjangoObjectPermissions
+from rest_framework.permissions import AllowAny, IsAuthenticated, DjangoObjectPermissions, IsAdminUser
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from .models import Room, Beacon, Building, Student, Class, Meeting
