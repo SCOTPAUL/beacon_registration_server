@@ -3,7 +3,6 @@ from django.contrib import admin
 from .models import *
 
 admin.site.register(Beacon)
-admin.site.register(Room)
 admin.site.register(Student)
 admin.site.register(AttendanceRecord)
 
@@ -27,6 +26,14 @@ class RoomInline(admin.TabularInline):
     extra = 0
     show_change_link = True
     readonly_fields = ('room_code',)
+
+class BeaconInline(admin.TabularInline):
+    model = Beacon
+    extra = 0
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    inlines = [BeaconInline]
 
 
 @admin.register(Class)

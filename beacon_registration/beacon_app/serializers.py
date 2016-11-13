@@ -1,24 +1,24 @@
 from rest_framework import serializers
 
-from .models import Room, Beacon, Building, Class, Meeting, Student
+from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance
 
 
 class BuildingSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Building
-        fields = ('id', 'building_name', 'rooms')
+        fields = ('building_name', 'rooms')
 
 
 class RoomSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Room
-        fields = ('id', 'room_code', 'beacons', 'building')
+        fields = ('room_code', 'beacons', 'building')
 
 
 class BeaconSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Beacon
-        fields = ('id', 'uuid', 'major', 'minor', 'room')
+        fields = ('uuid', 'major', 'minor', 'room')
 
 
 class StudentDeserializer(serializers.Serializer):
@@ -48,21 +48,22 @@ class ReservedNameHyperlinkedModelSerializer(serializers.HyperlinkedModelSeriali
             if field_name.endswith("_"):
                 fields[field_name[:-1]] = fields.pop(field_name)
 
+class MeetingInstanceSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = MeetingInstance
+        fields = ('room', 'date')
 
 class MeetingSerializer(ReservedNameHyperlinkedModelSerializer):
+    instances = MeetingInstanceSerializer(many=True, read_only=True)
     day_of_week = serializers.CharField(source='weekday')
     class_ = serializers.HyperlinkedRelatedField(source='class_rel', view_name='class-detail', many=False,
                                                  read_only=True)
 
     class Meta:
         model = Meeting
-        fields = ('time_start', 'time_end', 'day_of_week', 'class_')
+        fields = ('time_start', 'time_end', 'day_of_week', 'class_', 'instances')
 
 
-class MeetingInstanceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MeetingSerializer
-        fields = ('room', 'date', 'meeting')
 
 
 class ClassSerializer(serializers.HyperlinkedModelSerializer):
