@@ -56,7 +56,13 @@ class MeetingSerializer(ReservedNameHyperlinkedModelSerializer):
 
     class Meta:
         model = Meeting
-        fields = ('time_start', 'time_end', 'day_of_week', 'date_start', 'date_end', 'room', 'class_')
+        fields = ('time_start', 'time_end', 'day_of_week', 'class_')
+
+
+class MeetingInstanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MeetingSerializer
+        fields = ('room', 'date', 'meeting')
 
 
 class ClassSerializer(serializers.HyperlinkedModelSerializer):

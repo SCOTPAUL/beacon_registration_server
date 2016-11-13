@@ -1,17 +1,20 @@
+import calendar
+import datetime
+
 import requests
-from .permissions import IsUser
+from django.contrib.auth.models import User
 from django.db import transaction
 from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import AllowAny, IsAuthenticated, DjangoObjectPermissions, IsAdminUser
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django.contrib.auth.models import User
+from .meetingbuilder import get_or_create_meetings
+from .auth import ExpiringTokenAuthentication
 from .models import Room, Beacon, Building, Student, Class, Meeting
+from .permissions import IsUser
 from .serializers import RoomSerializer, BeaconSerializer, BuildingSerializer, StudentDeserializer, ClassSerializer, \
     MeetingSerializer, StudentSerializer
-from .auth import ExpiringTokenAuthentication
 
 
 class RoomViewSet(viewsets.ReadOnlyModelViewSet):
@@ -39,11 +42,22 @@ class TokenViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.data
 
-        r = requests.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
-                          data={'guid': data['username'], 'password': data['password']})
+        new_timetable_json = None
 
-        if not r.status_code == requests.codes.ok:
-            raise AuthenticationFailed("Wrong username or password")
+        with requests.Session() as s:
+            r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
+                       data={'guid': data['username'], 'password': data['password']})
+
+            if not r.status_code == requests.codes.ok:
+                raise AuthenticationFailed("Wrong username or password")
+
+            next_year = datetime.datetime.utcnow() + datetime.timedelta(days=365)
+            next_year_timestamp = calendar.timegm(next_year.utctimetuple())
+
+            r = s.get("https://frontdoor.spa.gla.ac.uk/spacett/timetable/events.m",
+                      params={'start': 0, 'end': next_year_timestamp})
+
+            new_timetable_json = r.json()
 
         try:
             student = Student.objects.get(user__username=data['username'])
@@ -58,17 +72,20 @@ class TokenViewSet(viewsets.ViewSet):
             except Token.DoesNotExist:
                 pass
 
+            if new_timetable_json is not None:
+                get_or_create_meetings(new_timetable_json, student)
+
             token = Token.objects.create(user=student.user)
 
         return Response({'token': token.key})
 
 
-class ClassViewSet(viewsets.ModelViewSet):
+class ClassViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Class.objects.all()
     serializer_class = ClassSerializer
 
 
-class MeetingViewSet(viewsets.ModelViewSet):
+class MeetingViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Meeting.objects.all()
     serializer_class = MeetingSerializer
 

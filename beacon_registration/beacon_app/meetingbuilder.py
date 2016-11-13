@@ -69,18 +69,24 @@ def json_to_courses(json_data: List[Dict]) -> Dict[str, Dict[MeetingT, MeetingIn
     return courses
 
 
-def get_or_create_meetings(courses: Dict[str, Dict[MeetingT, MeetingInstancesT]], student: Student):
+def get_or_create_meetings(json_data: List[Dict], student: Student):
+    courses = json_to_courses(json_data)
+    active_meeting_pks = []
+
     for course_name, meetings in courses.items():
         class_ = Class.objects.get_or_create(class_code=course_name)[0]
 
-        active_meeting_pks = []
-
-        if not class_.students.filter(pk=student.pk).exists():
-            class_.students.add(student)
+        if not class_.student_set.filter(pk=student.pk).exists():
+            class_.student_set.add(student)
 
         for meeting, instances in meetings.items():
-            meeting = Meeting.objects.get_or_create(time_start=meeting[1], time_end=meeting[2], day_of_week=meeting[0],
-                                                    class_rel=class_)[0]
+            meeting, created = Meeting.objects.get_or_create(time_start=meeting[1], time_end=meeting[2],
+                                                             day_of_week=meeting[0],
+                                                             class_rel=class_)
+
+            if not created and not meeting.active:
+                meeting.active = True
+                meeting.save()
 
             active_meeting_pks.append(meeting.pk)
 
@@ -90,7 +96,8 @@ def get_or_create_meetings(courses: Dict[str, Dict[MeetingT, MeetingInstancesT]]
 
                 MeetingInstance.objects.get_or_create(date=instance['date'], room=room, meeting=meeting)
 
-        inactive_meetings = Meeting.objects.filter(class_rel__students=student).exclude(pk__in=active_meeting_pks)
-        inactive_meetings.update(active=False)
+    student_meetings = Meeting.objects.filter(class_rel__student=student)
+    inactive_meetings = student_meetings.exclude(pk__in=active_meeting_pks)
+    inactive_meetings.update(active=False)
 
-        return inactive_meetings
+    return inactive_meetings
