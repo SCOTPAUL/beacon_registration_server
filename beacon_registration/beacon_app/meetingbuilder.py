@@ -1,6 +1,5 @@
 import datetime
 import dateutil.parser
-import json
 from collections import defaultdict
 from typing import Dict, List, Any, Tuple
 
@@ -73,7 +72,8 @@ def json_to_courses(json_data: List[Dict]) -> Dict[str, Dict[MeetingT, MeetingIn
 def get_or_create_meetings(courses: Dict[str, Dict[MeetingT, MeetingInstancesT]], student: Student):
     for course_name, meetings in courses.items():
         class_ = Class.objects.get_or_create(class_code=course_name)[0]
-        print(class_)
+
+        active_meeting_pks = []
 
         if not class_.students.filter(pk=student.pk).exists():
             class_.students.add(student)
@@ -82,9 +82,15 @@ def get_or_create_meetings(courses: Dict[str, Dict[MeetingT, MeetingInstancesT]]
             meeting = Meeting.objects.get_or_create(time_start=meeting[1], time_end=meeting[2], day_of_week=meeting[0],
                                                     class_rel=class_)[0]
 
+            active_meeting_pks.append(meeting.pk)
+
             for instance in instances:
                 building = Building.objects.get_or_create(building_name=instance['room'][0])[0]
                 room = Room.objects.get_or_create(building=building, room_code=instance['room'][1])[0]
 
-                new_inst = MeetingInstance.objects.get_or_create(date=instance['date'], room=room, meeting=meeting)[0]
+                MeetingInstance.objects.get_or_create(date=instance['date'], room=room, meeting=meeting)
 
+        inactive_meetings = Meeting.objects.filter(class_rel__students=student).exclude(pk__in=active_meeting_pks)
+        inactive_meetings.update(active=False)
+
+        return inactive_meetings

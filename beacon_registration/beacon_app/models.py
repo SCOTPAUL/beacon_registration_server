@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 
+
 class Student(models.Model):
     user = models.OneToOneField(User)
     classes = models.ManyToManyField('Class', blank=True)
@@ -59,6 +60,7 @@ class MeetingInstance(models.Model):
     def __str__(self):
         return '{} in room {} on {}'.format(self.meeting, self.room, self.date)
 
+
 class Meeting(models.Model):
     _WEEKDAY_STRINGS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -69,6 +71,7 @@ class Meeting(models.Model):
     time_start = models.TimeField()
     time_end = models.TimeField()
     day_of_week = models.IntegerField(choices=WEEKDAY_CHOICES)
+    active = models.BooleanField(default=True, blank=False, null=False)
 
     class_rel = models.ForeignKey('Class', related_name='meetings', verbose_name='Class')
 
