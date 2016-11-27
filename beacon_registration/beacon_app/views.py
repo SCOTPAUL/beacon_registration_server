@@ -13,10 +13,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from .meetingbuilder import get_or_create_meetings
 from .auth import ExpiringTokenAuthentication
-from .models import Room, Beacon, Building, Student, Class, Meeting, MeetingInstance
+from .models import Room, Beacon, Building, Student, Class, Meeting, MeetingInstance, AttendanceRecord
 from .permissions import IsUser
 from .serializers import RoomSerializer, BeaconSerializer, BuildingSerializer, StudentDeserializer, ClassSerializer, \
-    MeetingSerializer, StudentSerializer, MeetingInstanceSerializer
+    MeetingSerializer, StudentSerializer, MeetingInstanceSerializer, TimetableSerializer
 
 
 class RoomViewSet(viewsets.ReadOnlyModelViewSet):
@@ -92,6 +92,11 @@ class MeetingViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MeetingSerializer
 
 
+class MeetingInstanceViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = MeetingInstance.objects.all()
+    serializer_class = MeetingInstanceSerializer
+
+
 class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
@@ -103,7 +108,7 @@ class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
 class TimetableViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
     authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
-    serializer_class = MeetingInstanceSerializer
+    serializer_class = TimetableSerializer
 
     def get_queryset(self):
         meetings = self.request.user.student.meeting_set.all()
@@ -132,3 +137,10 @@ class TimetableViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
                 return queryset
         except ValueError:
             raise ParseError(detail="Filtering parameter was not in a valid format")
+
+#class AttendanceRecordViewSet(viewsets.ViewSet):
+#    permission_classes = (IsAuthenticated,)
+#    queryset = AttendanceRecord.objects.all()
+#    serializer_class = StudentDeserializer
+
+#    def create(self, request, format=None):

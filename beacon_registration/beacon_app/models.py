@@ -37,6 +37,9 @@ class Room(models.Model):
     class Meta:
         unique_together = ('building', 'room_code')
 
+    def has_beacon(self):
+        return self.beacons.exists()
+
     def __str__(self):
         return '{}: {}'.format(self.building, self.room_code)
 

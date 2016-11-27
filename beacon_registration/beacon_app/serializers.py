@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance
+from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord
 
 
 class BuildingSerializer(serializers.HyperlinkedModelSerializer):
@@ -48,13 +48,14 @@ class ReservedNameHyperlinkedModelSerializer(serializers.HyperlinkedModelSeriali
             if field_name.endswith("_"):
                 fields[field_name[:-1]] = fields.pop(field_name)
 
+
 class MeetingInstanceSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = MeetingInstance
-        fields = ('room', 'date')
+        fields = ('room', 'date', 'meeting')
+
 
 class MeetingSerializer(ReservedNameHyperlinkedModelSerializer):
-    instances = MeetingInstanceSerializer(many=True, read_only=True)
     day_of_week = serializers.CharField(source='weekday')
     class_ = serializers.HyperlinkedRelatedField(source='class_rel', view_name='class-detail', many=False,
                                                  read_only=True)
@@ -62,8 +63,6 @@ class MeetingSerializer(ReservedNameHyperlinkedModelSerializer):
     class Meta:
         model = Meeting
         fields = ('time_start', 'time_end', 'day_of_week', 'class_', 'instances')
-
-
 
 
 class ClassSerializer(serializers.HyperlinkedModelSerializer):
@@ -78,3 +77,24 @@ class StudentSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Student
         fields = ('username', 'classes')
+
+
+class TimetableSerializer(serializers.Serializer):
+    time_start = serializers.TimeField(source='meeting.time_start', read_only=True)
+    time_end = serializers.TimeField(source='meeting.time_end', read_only=True)
+    class_name = serializers.CharField(source='meeting.class_rel.class_code', read_only=True)
+    attended = serializers.BooleanField(source='_attended', read_only=True)
+    room_has_beacon = serializers.BooleanField(source='room.has_beacon', read_only=True)
+    room = serializers.HyperlinkedRelatedField(view_name='room-detail', read_only=True)
+
+    def __init__(self, *args, **kwargs):
+
+        # Instantiate the superclass normally
+        super(TimetableSerializer, self).__init__(*args, **kwargs)
+
+        for meetinginstance in self.instance:
+            meetinginstance._attended = self.did_attend(meetinginstance)
+
+    def did_attend(self, obj):
+        student = self.context['request'].user.student
+        return AttendanceRecord.objects.filter(student=student, meeting_instance=obj).exists()
