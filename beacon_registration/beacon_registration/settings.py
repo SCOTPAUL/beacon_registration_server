@@ -136,4 +136,3 @@ REST_FRAMEWORK = {
     ),
     'TOKEN_EXPIRATION': timedelta(hours=24)
 }
-

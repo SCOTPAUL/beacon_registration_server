@@ -17,7 +17,7 @@ class MeetingInline(admin.TabularInline):
     extra = 0
     max_num = 0
     show_change_link = True
-    readonly_fields = ('time_start', 'time_end', 'day_of_week', 'active')
+    readonly_fields = ('time_start', 'time_end', 'day_of_week', 'students')
     can_delete = False
 
 

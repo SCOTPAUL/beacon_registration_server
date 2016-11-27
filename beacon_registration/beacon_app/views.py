@@ -1,20 +1,22 @@
 import calendar
 import datetime
-
+from rest_framework import status
 import requests
 from django.contrib.auth.models import User
 from django.db import transaction
 from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import AuthenticationFailed, ValidationError, NotFound, ParseError
+from rest_framework import serializers
+
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from .meetingbuilder import get_or_create_meetings
 from .auth import ExpiringTokenAuthentication
-from .models import Room, Beacon, Building, Student, Class, Meeting
+from .models import Room, Beacon, Building, Student, Class, Meeting, MeetingInstance
 from .permissions import IsUser
 from .serializers import RoomSerializer, BeaconSerializer, BuildingSerializer, StudentDeserializer, ClassSerializer, \
-    MeetingSerializer, StudentSerializer
+    MeetingSerializer, StudentSerializer, MeetingInstanceSerializer
 
 
 class RoomViewSet(viewsets.ReadOnlyModelViewSet):
@@ -96,3 +98,37 @@ class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
     lookup_field = 'user__username'
     authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (IsUser,)
+
+
+class TimetableViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+    authentication_classes = (ExpiringTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = MeetingInstanceSerializer
+
+    def get_queryset(self):
+        meetings = self.request.user.student.meeting_set.all()
+
+        queryset = MeetingInstance.objects.filter(meeting__in=meetings)
+
+        day = self.request.query_params.get('day', None)
+        week = self.request.query_params.get('week', None)
+        month = self.request.query_params.get('month', None)
+
+        try:
+            if day is not None:
+                day_date = datetime.datetime.strptime(day, '%Y-%m-%d').date()
+                return queryset.filter(date=day_date)
+            elif week is not None:
+                day_date = datetime.datetime.strptime(week, '%Y-%m-%d').date()
+                week_start = day_date - datetime.timedelta(days=day_date.weekday())
+                week_end = week_start + datetime.timedelta(days=6)
+                return queryset.filter(date__gte=week_start, date__lte=week_end)
+            elif month is not None:
+                month_datetime = datetime.datetime.strptime(month, '%Y-%m')
+                month = month_datetime.month
+                year = month_datetime.year
+                return queryset.filter(date__year=year, date__month=month)
+            else:
+                return queryset
+        except ValueError:
+            raise ParseError(detail="Filtering parameter was not in a valid format")

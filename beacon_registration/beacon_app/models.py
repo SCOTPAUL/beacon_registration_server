@@ -67,10 +67,10 @@ class Meeting(models.Model):
         enumerate(_WEEKDAY_STRINGS)
     )
 
+    students = models.ManyToManyField('Student')
     time_start = models.TimeField()
     time_end = models.TimeField()
     day_of_week = models.IntegerField(choices=WEEKDAY_CHOICES)
-    active = models.BooleanField(default=True, blank=False, null=False)
 
     class_rel = models.ForeignKey('Class', related_name='meetings', verbose_name='Class')
 

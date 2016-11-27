@@ -84,9 +84,8 @@ def get_or_create_meetings(json_data: List[Dict], student: Student):
                                                              day_of_week=meeting[0],
                                                              class_rel=class_)
 
-            if not created and not meeting.active:
-                meeting.active = True
-                meeting.save()
+            meeting.students.add(student)
+            meeting.save()
 
             active_meeting_pks.append(meeting.pk)
 
@@ -98,6 +97,8 @@ def get_or_create_meetings(json_data: List[Dict], student: Student):
 
     student_meetings = Meeting.objects.filter(class_rel__student=student)
     inactive_meetings = student_meetings.exclude(pk__in=active_meeting_pks)
-    inactive_meetings.update(active=False)
+
+    for meeting in inactive_meetings:
+        meeting.students.remove(student)
 
     return inactive_meetings
