@@ -20,6 +20,10 @@ class BeaconSerializer(serializers.HyperlinkedModelSerializer):
         model = Beacon
         fields = ('uuid', 'major', 'minor', 'room')
 
+class BeaconDeserializer(serializers.Serializer):
+    uuid = serializers.UUIDField(required=True)
+    major = serializers.IntegerField(required=True)
+    minor = serializers.IntegerField(required=True)
 
 class StudentDeserializer(serializers.Serializer):
     username = serializers.CharField(max_length=140, required=True)
@@ -98,3 +102,9 @@ class TimetableSerializer(serializers.Serializer):
     def did_attend(self, obj):
         student = self.context['request'].user.student
         return AttendanceRecord.objects.filter(student=student, meeting_instance=obj).exists()
+
+
+class AttendanceRecordSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = AttendanceRecord
+        fields = ('meeting_instance',)

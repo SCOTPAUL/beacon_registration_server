@@ -11,6 +11,7 @@ router.register(r'meetings', MeetingViewSet)
 router.register(r'meeting-instances', MeetingInstanceViewSet)
 router.register(r'students', StudentViewSet)
 router.register(r'timetables', TimetableViewSet, base_name='timetable')
+router.register(r'attendance-records', AttendanceRecordViewSet, base_name='attendance-record')
 
 
 urlpatterns = router.urls

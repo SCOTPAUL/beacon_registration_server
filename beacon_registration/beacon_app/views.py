@@ -16,7 +16,8 @@ from .auth import ExpiringTokenAuthentication
 from .models import Room, Beacon, Building, Student, Class, Meeting, MeetingInstance, AttendanceRecord
 from .permissions import IsUser
 from .serializers import RoomSerializer, BeaconSerializer, BuildingSerializer, StudentDeserializer, ClassSerializer, \
-    MeetingSerializer, StudentSerializer, MeetingInstanceSerializer, TimetableSerializer
+    MeetingSerializer, StudentSerializer, MeetingInstanceSerializer, TimetableSerializer, AttendanceRecordSerializer, \
+    BeaconDeserializer
 
 
 class RoomViewSet(viewsets.ReadOnlyModelViewSet):
@@ -138,9 +139,33 @@ class TimetableViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
         except ValueError:
             raise ParseError(detail="Filtering parameter was not in a valid format")
 
-#class AttendanceRecordViewSet(viewsets.ViewSet):
-#    permission_classes = (IsAuthenticated,)
-#    queryset = AttendanceRecord.objects.all()
-#    serializer_class = StudentDeserializer
 
-#    def create(self, request, format=None):
+class AttendanceRecordViewSet(viewsets.ViewSet):
+    authentication_classes = (ExpiringTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def create(self, request, format=None):
+        student = self.request.user.student
+
+        serializer = BeaconDeserializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            beacon = Beacon.objects.get(uuid=data['uuid'], major=data['major'], minor=data['minor'])
+        except Beacon.DoesNotExist:
+            raise NotFound("No such beacon exists")
+
+        try:
+            current_time = datetime.datetime.now().time()
+            current_date = datetime.date.today()
+            meetinginstance = MeetingInstance.objects.get(room=beacon.room, date=current_date,
+                                                          meeting__time_start__lte=current_time,
+                                                          meeting__time_end__gte=current_time,
+                                                          meeting__students=student)
+        except MeetingInstance.DoesNotExist:
+            raise NotFound("The student is not in a class where this beacon is")
+
+        record = AttendanceRecord.objects.get_or_create(student=student, meeting_instance=meetinginstance)[0]
+
+        return Response(AttendanceRecordSerializer(record, context={'request': request}).data)

@@ -73,14 +73,17 @@ class Meeting(models.Model):
     students = models.ManyToManyField('Student')
     time_start = models.TimeField()
     time_end = models.TimeField()
-    day_of_week = models.IntegerField(choices=WEEKDAY_CHOICES)
+    day_of_week = models.IntegerField(choices=WEEKDAY_CHOICES, null=False, blank=False)
 
     class_rel = models.ForeignKey('Class', related_name='meetings', verbose_name='Class')
 
-    def weekday(self):
-        return self._WEEKDAY_STRINGS[int(self.day_of_week)]
+    def weekday(self) -> str:
+        if self.day_of_week is not None:
+            return self._WEEKDAY_STRINGS[int(self.day_of_week)]
+        else:
+            return ""
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '{} at {}-{} for {}'.format(
             self.weekday(),
             self.time_start,
