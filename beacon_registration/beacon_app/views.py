@@ -152,6 +152,7 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
         data = serializer.validated_data
 
         try:
+            # TODO: Replace this lookup with a ShuffledIDs lookup
             beacon = Beacon.objects.get(uuid=data['uuid'], major=data['major'], minor=data['minor'])
         except Beacon.DoesNotExist:
             raise NotFound("No such beacon exists")

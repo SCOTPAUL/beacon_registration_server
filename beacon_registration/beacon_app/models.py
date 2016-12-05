@@ -1,5 +1,7 @@
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models
+import calendar
 
 
 class Student(models.Model):
@@ -62,12 +64,20 @@ class MeetingInstance(models.Model):
     def __str__(self):
         return '{} in room {} on {}'.format(self.meeting, self.room, self.date)
 
+    def clean(self):
+        if self.date.weekday() != self.meeting.day_of_week:
+            raise ValidationError("This instance's date falls on a {}, but its related Meeting is on a {}".format(
+                                  calendar.day_name[self.date.weekday()],
+                                  self.meeting.weekday()))
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super(MeetingInstance, self).save(*args, **kwargs)
+
 
 class Meeting(models.Model):
-    _WEEKDAY_STRINGS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-
     WEEKDAY_CHOICES = (
-        enumerate(_WEEKDAY_STRINGS)
+        enumerate(list(calendar.day_name))
     )
 
     students = models.ManyToManyField('Student')
@@ -79,7 +89,7 @@ class Meeting(models.Model):
 
     def weekday(self) -> str:
         if self.day_of_week is not None:
-            return self._WEEKDAY_STRINGS[int(self.day_of_week)]
+            return calendar.day_name[self.day_of_week]
         else:
             return ""
 
@@ -95,6 +105,10 @@ class Meeting(models.Model):
 class AttendanceRecord(models.Model):
     meeting_instance = models.ForeignKey('MeetingInstance', related_name='attendance_records')
     student = models.ForeignKey('Student', related_name='attendance_records')
+
+    def __str__(self):
+        return "{} attended {}".format(self.student,
+                                       self.meeting_instance)
 
 
 class ShuffledID(models.Model):
