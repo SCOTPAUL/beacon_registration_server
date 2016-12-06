@@ -1,18 +1,16 @@
 import calendar
 import datetime
-from rest_framework import status
+
 import requests
 from django.contrib.auth.models import User
 from django.db import transaction
 from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
-from rest_framework.exceptions import AuthenticationFailed, ValidationError, NotFound, ParseError
-from rest_framework import serializers
-
+from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from .meetingbuilder import get_or_create_meetings
 from .auth import ExpiringTokenAuthentication
+from .meetingbuilder import get_or_create_meetings
 from .models import Room, Beacon, Building, Student, Class, Meeting, MeetingInstance, AttendanceRecord
 from .permissions import IsUser
 from .serializers import RoomSerializer, BeaconSerializer, BuildingSerializer, StudentDeserializer, ClassSerializer, \
@@ -36,6 +34,9 @@ class BuildingViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class TokenViewSet(viewsets.ViewSet):
+    """
+    Contains the views for exchanging username and password information for a temporary access token
+    """
     permission_classes = (AllowAny,)
     queryset = Token.objects.all()
     serializer_class = StudentDeserializer
@@ -107,6 +108,10 @@ class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
 
 
 class TimetableViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+    """
+    Contains the views which present MeetingInstance information in a
+    client friendly manner
+    """
     authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     serializer_class = TimetableSerializer
@@ -141,6 +146,9 @@ class TimetableViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
 
 
 class AttendanceRecordViewSet(viewsets.ViewSet):
+    """
+    Contains the views related to creating AttendanceRecords
+    """
     authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
@@ -160,13 +168,13 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
         try:
             current_time = datetime.datetime.now().time()
             current_date = datetime.date.today()
-            meetinginstance = MeetingInstance.objects.get(room=beacon.room, date=current_date,
-                                                          meeting__time_start__lte=current_time,
-                                                          meeting__time_end__gte=current_time,
-                                                          meeting__students=student)
+            meeting_instance = MeetingInstance.objects.get(room=beacon.room, date=current_date,
+                                                           meeting__time_start__lte=current_time,
+                                                           meeting__time_end__gte=current_time,
+                                                           meeting__students=student)
         except MeetingInstance.DoesNotExist:
             raise NotFound("The student is not in a class where this beacon is")
 
-        record = AttendanceRecord.objects.get_or_create(student=student, meeting_instance=meetinginstance)[0]
+        record = AttendanceRecord.objects.get_or_create(student=student, meeting_instance=meeting_instance)[0]
 
         return Response(AttendanceRecordSerializer(record, context={'request': request}).data)

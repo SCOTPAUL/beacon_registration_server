@@ -27,9 +27,11 @@ class RoomInline(admin.TabularInline):
     show_change_link = True
     readonly_fields = ('room_code',)
 
+
 class BeaconInline(admin.TabularInline):
     model = Beacon
     extra = 0
+
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):

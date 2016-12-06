@@ -26,10 +26,10 @@ class Beacon(models.Model):
 
 
 class Building(models.Model):
-    building_name = models.CharField(unique=True, blank=False, null=False, max_length=140)
+    name = models.CharField(unique=True, blank=False, null=False, max_length=140)
 
     def __str__(self):
-        return self.building_name
+        return self.name
 
 
 class Room(models.Model):

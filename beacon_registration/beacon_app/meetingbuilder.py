@@ -90,7 +90,7 @@ def get_or_create_meetings(json_data: List[Dict], student: Student):
             active_meeting_pks.append(meeting.pk)
 
             for instance in instances:
-                building = Building.objects.get_or_create(building_name=instance['room'][0])[0]
+                building = Building.objects.get_or_create(name=instance['room'][0])[0]
                 room = Room.objects.get_or_create(building=building, room_code=instance['room'][1])[0]
 
                 MeetingInstance.objects.get_or_create(date=instance['date'], room=room, meeting=meeting)
