@@ -76,9 +76,6 @@ def get_or_create_meetings(json_data: List[Dict], student: Student):
     for course_name, meetings in courses.items():
         class_ = Class.objects.get_or_create(class_code=course_name)[0]
 
-        if not class_.student_set.filter(pk=student.pk).exists():
-            class_.student_set.add(student)
-
         for meeting, instances in meetings.items():
             meeting, created = Meeting.objects.get_or_create(time_start=meeting[1], time_end=meeting[2],
                                                              day_of_week=meeting[0],
@@ -95,7 +92,7 @@ def get_or_create_meetings(json_data: List[Dict], student: Student):
 
                 MeetingInstance.objects.get_or_create(date=instance['date'], room=room, meeting=meeting)
 
-    student_meetings = Meeting.objects.filter(class_rel__student=student)
+    student_meetings = Meeting.objects.filter(students=student)
     inactive_meetings = student_meetings.exclude(pk__in=active_meeting_pks)
 
     for meeting in inactive_meetings:

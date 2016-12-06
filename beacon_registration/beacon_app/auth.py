@@ -9,6 +9,12 @@ from rest_framework.authentication import TokenAuthentication
 # Modified from
 # http://stackoverflow.com/questions/14567586/token-authentication-for-restful-api-should-the-token-be-periodically-changed
 class ExpiringTokenAuthentication(TokenAuthentication):
+    """
+    Same as TokenAuthentication, except that Tokens become invalid a period of time after they have been generated.
+    The time to expire should be set as a dictionary field mapping from 'TOKEN_EXPIRATION' to a datetime.timedelta
+    in the REST_FRAMEWORK dictionary in settings.py
+    """
+
     def authenticate_credentials(self, key):
         model = self.get_model()
 

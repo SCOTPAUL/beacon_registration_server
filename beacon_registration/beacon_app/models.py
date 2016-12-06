@@ -1,18 +1,32 @@
+import calendar
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
-import calendar
 
 
 class Student(models.Model):
+    """
+    Representation of a student
+    """
     user = models.OneToOneField(User)
-    classes = models.ManyToManyField('Class', blank=True)
 
     def __str__(self):
         return self.user.username
 
+    @property
+    def classes(self):
+        """
+        :return: A QuerySet containing of all the Class objects that this student has at least one Meeting for
+        """
+        class_ids = self.meeting_set.values('class_rel').distinct()
+        return Class.objects.filter(pk__in=class_ids)
+
 
 class Beacon(models.Model):
+    """
+    Represents a Bluetooth iBeacon's identifiers and physical Room location
+    """
     uuid = models.UUIDField()
     major = models.IntegerField()
     minor = models.IntegerField()
@@ -26,6 +40,9 @@ class Beacon(models.Model):
 
 
 class Building(models.Model):
+    """
+    A collection of Rooms, in the same building
+    """
     name = models.CharField(unique=True, blank=False, null=False, max_length=140)
 
     def __str__(self):
@@ -33,6 +50,9 @@ class Building(models.Model):
 
 
 class Room(models.Model):
+    """
+    Represents a room in a building
+    """
     building = models.ForeignKey('Building', null=False, blank=False, related_name='rooms')
     room_code = models.CharField(unique=True, max_length=140)
 
@@ -47,6 +67,9 @@ class Room(models.Model):
 
 
 class Class(models.Model):
+    """
+    Represents a university course, which has some number of Meetings
+    """
     class_code = models.CharField(unique=True, max_length=140)
 
     class Meta:
@@ -56,26 +79,12 @@ class Class(models.Model):
         return self.class_code
 
 
-class MeetingInstance(models.Model):
-    date = models.DateField()
-    meeting = models.ForeignKey('Meeting', related_name='instances')
-    room = models.ForeignKey('Room', related_name='meeting_instances')
-
-    def __str__(self):
-        return '{} in room {} on {}'.format(self.meeting, self.room, self.date)
-
-    def clean(self):
-        if self.date.weekday() != self.meeting.day_of_week:
-            raise ValidationError("This instance's date falls on a {}, but its related Meeting is on a {}".format(
-                                  calendar.day_name[self.date.weekday()],
-                                  self.meeting.weekday()))
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        return super(MeetingInstance, self).save(*args, **kwargs)
-
-
 class Meeting(models.Model):
+    """
+    Represents some sort of class gathering, e.g. a lecture, lab, tutorial etc.
+    A subset of the students enrolled in the class are related to this meeting,
+    meaning that this is one of the Meetings that they should attend.
+    """
     WEEKDAY_CHOICES = (
         enumerate(list(calendar.day_name))
     )
@@ -102,7 +111,35 @@ class Meeting(models.Model):
         )
 
 
+class MeetingInstance(models.Model):
+    """
+    A particular occurrence of a Meeting on a date, along with the Room that the instance occurs in.
+
+    For example, if a class has one lecture in a different room every week, that class will only have one related
+    Meeting, but that meeting will have many MeetingInstances, each of which have a different Room.
+    """
+    date = models.DateField()
+    meeting = models.ForeignKey('Meeting', related_name='instances')
+    room = models.ForeignKey('Room', related_name='meeting_instances')
+
+    def __str__(self):
+        return '{} in room {} on {}'.format(self.meeting, self.room, self.date)
+
+    def clean(self):
+        if self.date.weekday() != self.meeting.day_of_week:
+            raise ValidationError("This instance's date falls on a {}, but its related Meeting is on a {}".format(
+                                  calendar.day_name[self.date.weekday()],
+                                  self.meeting.weekday()))
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super(MeetingInstance, self).save(*args, **kwargs)
+
+
 class AttendanceRecord(models.Model):
+    """
+    A relation between a MeetingInstance and a Student, which marks that they attended that particular MeetingInstance
+    """
     meeting_instance = models.ForeignKey('MeetingInstance', related_name='attendance_records')
     student = models.ForeignKey('Student', related_name='attendance_records')
 
@@ -112,6 +149,10 @@ class AttendanceRecord(models.Model):
 
 
 class ShuffledID(models.Model):
+    """
+    Represents the 'faked out' public identifiers broadcast by a Kontakt iBeacon using Kontakt Secure Shuffling,
+    along with the real Beacon that these shuffled identifiers represent at a period of time ending at valid_until.
+    """
     uuid = models.UUIDField()
     major = models.IntegerField()
     minor = models.IntegerField()

@@ -1,17 +1,14 @@
 import datetime
 import json
 
-import binascii
-import os
-
-from freezegun import freeze_time
-from rest_framework.authtoken.models import Token
-from .views import TimetableViewSet, TokenViewSet, AttendanceRecordViewSet
 from django.contrib.auth.models import User
 from django.test import TestCase
+from freezegun import freeze_time
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APIRequestFactory, force_authenticate, RequestsClient
 from .meetingbuilder import get_or_create_meetings
 from .models import Student, Meeting, Class, Building, Room, MeetingInstance, Beacon
+from .views import TimetableViewSet, AttendanceRecordViewSet
 
 
 class TimetableConstruction(TestCase):
@@ -27,12 +24,11 @@ class TimetableConstruction(TestCase):
 
         inactive_meetings = get_or_create_meetings(data, self.student)
 
-        self.assertEqual(len(self.student.classes.all()), 8)
+        self.assertEqual(len(self.student.classes), 8)
         self.assertEqual(len(inactive_meetings), 0)
 
     def test_meetings_inactive(self):
         old_class = Class.objects.create(class_code="Advanced Sleeping")
-        self.student.classes.add(old_class)
 
         old_meeting = Meeting.objects.create(time_start=datetime.time(9, 00), time_end=datetime.time(10, 00),
                                              day_of_week=0, class_rel=old_class)
@@ -210,7 +206,7 @@ class AttendanceRecords(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.data['detail'], 'No such beacon exists')
 
-        # Test for existent beacon details, where the student doesn't have a meeting in that room
+        # Test for existing beacon details, where the student doesn't have a meeting in that room
         existing_beacon_data = {'uuid': '123e4567-e89b-12d3-a456-426655440000', 'major': 2, 'minor': 1}
 
         request = factory.post('/attendance-records/', existing_beacon_data)

@@ -20,10 +20,12 @@ class BeaconSerializer(serializers.HyperlinkedModelSerializer):
         model = Beacon
         fields = ('uuid', 'major', 'minor', 'room')
 
+
 class BeaconDeserializer(serializers.Serializer):
     uuid = serializers.UUIDField(required=True)
     major = serializers.IntegerField(required=True)
     minor = serializers.IntegerField(required=True)
+
 
 class StudentDeserializer(serializers.Serializer):
     username = serializers.CharField(max_length=140, required=True)
@@ -92,7 +94,6 @@ class TimetableSerializer(serializers.Serializer):
     room = serializers.HyperlinkedRelatedField(view_name='room-detail', read_only=True)
 
     def __init__(self, *args, **kwargs):
-
         # Instantiate the superclass normally
         super(TimetableSerializer, self).__init__(*args, **kwargs)
 
