@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 
 from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord
 
@@ -6,7 +7,7 @@ from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInst
 class BuildingSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Building
-        fields = ('building_name', 'rooms')
+        fields = ('name', 'rooms')
 
 
 class RoomSerializer(serializers.HyperlinkedModelSerializer):
@@ -88,10 +89,13 @@ class StudentSerializer(serializers.HyperlinkedModelSerializer):
 class TimetableSerializer(serializers.Serializer):
     time_start = serializers.TimeField(source='meeting.time_start', read_only=True)
     time_end = serializers.TimeField(source='meeting.time_end', read_only=True)
+    date = serializers.DateField(read_only=True)
     class_name = serializers.CharField(source='meeting.class_rel.class_code', read_only=True)
     attended = serializers.BooleanField(source='_attended', read_only=True)
     room_has_beacon = serializers.BooleanField(source='room.has_beacon', read_only=True)
-    room = serializers.HyperlinkedRelatedField(view_name='room-detail', read_only=True)
+    room_name = serializers.CharField(source='room.room_code', read_only=True)
+    building_name = serializers.CharField(source='room.building', read_only=True)
+    self = serializers.HyperlinkedIdentityField(view_name='meetinginstance-detail')
 
     def __init__(self, *args, **kwargs):
         # Instantiate the superclass normally
