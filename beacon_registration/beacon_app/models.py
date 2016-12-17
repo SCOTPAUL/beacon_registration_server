@@ -22,6 +22,15 @@ class Student(models.Model):
         class_ids = self.meeting_set.values('class_rel').distinct()
         return Class.objects.filter(pk__in=class_ids)
 
+class Lecturer(models.Model):
+    """
+    Representation of a person who leads a class meeting
+    """
+
+    name = models.CharField(unique=True, blank=False, null=False, max_length=140)
+
+    def __str__(self):
+        return self.name
 
 class Beacon(models.Model):
     """
@@ -121,6 +130,10 @@ class MeetingInstance(models.Model):
     date = models.DateField()
     meeting = models.ForeignKey('Meeting', related_name='instances')
     room = models.ForeignKey('Room', related_name='meeting_instances')
+    lecturer = models.ForeignKey('Lecturer', related_name='meeting_instances', null=True, blank=True)
+
+    class Meta:
+        unique_together = ('date', 'meeting', 'room')
 
     def __str__(self):
         return '{} in room {} on {}'.format(self.meeting, self.room, self.date)

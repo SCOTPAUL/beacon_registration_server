@@ -59,7 +59,7 @@ class ReservedNameHyperlinkedModelSerializer(serializers.HyperlinkedModelSeriali
 class MeetingInstanceSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = MeetingInstance
-        fields = ('room', 'date', 'meeting')
+        fields = ('room', 'date', 'meeting', 'lecturer')
 
 
 class MeetingSerializer(ReservedNameHyperlinkedModelSerializer):
@@ -95,6 +95,7 @@ class TimetableSerializer(serializers.Serializer):
     room_has_beacon = serializers.BooleanField(source='room.has_beacon', read_only=True)
     room_name = serializers.CharField(source='room.room_code', read_only=True)
     building_name = serializers.CharField(source='room.building', read_only=True)
+    lecturer = serializers.CharField(read_only=True)
     self = serializers.HyperlinkedIdentityField(view_name='meetinginstance-detail')
 
     def __init__(self, *args, **kwargs):

@@ -51,3 +51,8 @@ class MeetingAdmin(admin.ModelAdmin):
 @admin.register(Building)
 class BuildingAdmin(admin.ModelAdmin):
     inlines = [RoomInline]
+
+
+@admin.register(Lecturer)
+class LecturerAdmin(admin.ModelAdmin):
+    inlines = [MeetingInstanceInline]

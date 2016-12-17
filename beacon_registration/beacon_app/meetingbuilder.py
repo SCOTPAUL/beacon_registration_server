@@ -3,7 +3,7 @@ import dateutil.parser
 from collections import defaultdict
 from typing import Dict, List, Any, Tuple
 
-from .models import Class, Student, Meeting, Building, Room, MeetingInstance
+from .models import Class, Student, Meeting, Building, Room, MeetingInstance, Lecturer
 
 Event = Dict[str, Any]
 Courses = Dict[str, List[Event]]
@@ -15,21 +15,35 @@ def parse_events(events: List[Dict[Any, Any]]) -> List[Event]:
     def identity(val):
         return val
 
-    def split_room(val: str):
+    def split_room(val: str) -> Tuple[str, str]:
         return tuple(val.split(':', 1))
 
-    def make_time(val: str):
+    def make_time(val: str) -> datetime.time:
         return datetime.datetime.strptime(val, '%Y-%m-%d %X').time()
 
-    def make_date(val: str):
+    def make_date(val: str) -> datetime.date:
         return dateutil.parser.parse(val).date()
 
+    def parse_name(val: str) -> str:
+        if val is None:
+            return val
+
+        names = val.split(',', 1)
+
+        for i, name in enumerate(names):
+            names[i] = name.strip()
+
+        if len(names) == 2:
+            names[0], names[1] = names[1], names[0]
+
+        return ' '.join(names)
+
     keys_and_transforms = [('room', split_room), ('course', identity), ('start', make_time), ('end', make_time),
-                           ('date', make_date)]
+                           ('date', make_date), ('lecturer', parse_name)]
 
     parsed_events = []
     for event in events:
-        new_event = {keep_key[0]: keep_key[1](event[keep_key[0]]) for keep_key in keys_and_transforms}
+        new_event = {keep_key[0]: keep_key[1](event.get(keep_key[0], None)) for keep_key in keys_and_transforms}
 
         parsed_events.append(new_event)
 
@@ -87,10 +101,17 @@ def get_or_create_meetings(json_data: List[Dict], student: Student):
             active_meeting_pks.append(meeting.pk)
 
             for instance in instances:
+                if instance['lecturer'] is not None:
+                    lecturer = Lecturer.objects.get_or_create(name=instance['lecturer'])[0]
+                else:
+                    lecturer = None
+
                 building = Building.objects.get_or_create(name=instance['room'][0])[0]
                 room = Room.objects.get_or_create(building=building, room_code=instance['room'][1])[0]
 
-                MeetingInstance.objects.get_or_create(date=instance['date'], room=room, meeting=meeting)
+                meet_inst = MeetingInstance.objects.get_or_create(date=instance['date'], room=room, meeting=meeting)[0]
+                meet_inst.lecturer = lecturer
+                meet_inst.save()
 
     student_meetings = Meeting.objects.filter(students=student)
     inactive_meetings = student_meetings.exclude(pk__in=active_meeting_pks)
