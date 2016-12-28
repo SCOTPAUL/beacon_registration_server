@@ -5,13 +5,15 @@ from typing import Dict, List, Any, Tuple, Union
 
 from .models import Class, Student, Meeting, Building, Room, MeetingInstance, Lecturer
 
-Event = Dict[str, Any]
+EventsJson=List[Dict[Any, Any]]
+EventComponent = Any
+Event = Dict[str, EventComponent]
 Courses = Dict[str, List[Event]]
 MeetingInstancesT = List[Event]
 MeetingT = Tuple[int, datetime.time, datetime.time]
 
 
-def parse_events(events: List[Dict[Any, Any]]) -> List[Event]:
+def parse_events(events: EventsJson) -> List[Event]:
     def identity(val):
         return val
 
@@ -21,9 +23,8 @@ def parse_events(events: List[Dict[Any, Any]]) -> List[Event]:
     def make_time(val: str) -> datetime.time:
         return datetime.datetime.strptime(val, '%Y-%m-%d %X').time()
 
-    def make_date(val: str) -> datetime.date:
-        print(val)
-        return dateutil.parser.parse(val).date()
+    def make_date(val: int) -> datetime.date:
+        return datetime.datetime.utcfromtimestamp(val / 1000).date()
 
     def parse_name(val: str) -> Union[str, None]:
         if val is None:
@@ -44,7 +45,6 @@ def parse_events(events: List[Dict[Any, Any]]) -> List[Event]:
 
     parsed_events = []
     for event in events:
-        print(event)
         new_event = {keep_key[0]: keep_key[1](event.get(keep_key[0], None)) for keep_key in keys_and_transforms}
 
         parsed_events.append(new_event)
