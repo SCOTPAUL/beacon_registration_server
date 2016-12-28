@@ -9,7 +9,8 @@ class Student(models.Model):
     """
     Representation of a student
     """
-    user = models.OneToOneField(User)
+    user = models.OneToOneField(User, unique=True)
+    shared_with = models.ManyToManyField('Student', related_name='shared_from')
 
     def __str__(self):
         return self.user.username
@@ -22,6 +23,11 @@ class Student(models.Model):
         class_ids = self.meeting_set.values('class_rel').distinct()
         return Class.objects.filter(pk__in=class_ids)
 
+    @property
+    def username(self):
+        return self.user.username
+
+
 class Lecturer(models.Model):
     """
     Representation of a person who leads a class meeting
@@ -31,6 +37,7 @@ class Lecturer(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class Beacon(models.Model):
     """
@@ -141,8 +148,8 @@ class MeetingInstance(models.Model):
     def clean(self):
         if self.date.weekday() != self.meeting.day_of_week:
             raise ValidationError("This instance's date falls on a {}, but its related Meeting is on a {}".format(
-                                  calendar.day_name[self.date.weekday()],
-                                  self.meeting.weekday()))
+                calendar.day_name[self.date.weekday()],
+                self.meeting.weekday()))
 
     def save(self, *args, **kwargs):
         self.full_clean()

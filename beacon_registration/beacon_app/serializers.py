@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from rest_framework.reverse import reverse
 
 from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord
 
@@ -39,6 +38,17 @@ class StudentDeserializer(serializers.Serializer):
 
         if not (value[:-1].isdigit() and value[-1].isalpha()):
             raise serializers.ValidationError("Username not in correct format")
+
+        return value
+
+
+class FriendDeserializer(serializers.Serializer):
+    username = serializers.CharField(max_length=140, required=True)
+
+    @staticmethod
+    def validate_username(value: str) -> str:
+        if not Student.objects.filter(user__username=value).exists():
+            raise serializers.ValidationError("Student doesn't exist")
 
         return value
 
@@ -86,6 +96,23 @@ class StudentSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('username', 'classes')
 
 
+class FriendSerializer(serializers.ModelSerializer):
+    shared_with = serializers.StringRelatedField(many=True)
+    shared_from = serializers.StringRelatedField(many=True)
+
+    class Meta:
+        model = Student
+        fields = ('shared_with', 'shared_from')
+
+
+class AllowedTimetableSerializer(serializers.ModelSerializer):
+    my_timetable = serializers.HyperlinkedRelatedField(view_name='timetable-detail', read_only=True, lookup_field='username', source='user')
+    shared_with_me = serializers.HyperlinkedRelatedField(view_name='timetable-detail', many=True, read_only=True, source='shared_from', lookup_field='username')
+
+    class Meta:
+        model = Student
+        fields = ('my_timetable', 'shared_with_me')
+
 class TimetableSerializer(serializers.Serializer):
     time_start = serializers.TimeField(source='meeting.time_start', read_only=True)
     time_end = serializers.TimeField(source='meeting.time_end', read_only=True)
@@ -96,7 +123,7 @@ class TimetableSerializer(serializers.Serializer):
     room_name = serializers.CharField(source='room.room_code', read_only=True)
     building_name = serializers.CharField(source='room.building', read_only=True)
     lecturer = serializers.CharField(read_only=True)
-    self = serializers.HyperlinkedIdentityField(view_name='meetinginstance-detail')
+    self = serializers.HyperlinkedIdentityField(view_name='meetinginstance-detail', read_only=True)
 
     def __init__(self, *args, **kwargs):
         # Instantiate the superclass normally
@@ -106,7 +133,7 @@ class TimetableSerializer(serializers.Serializer):
             meetinginstance._attended = self.did_attend(meetinginstance)
 
     def did_attend(self, obj):
-        student = self.context['request'].user.student
+        student = self.context['student']
         return AttendanceRecord.objects.filter(student=student, meeting_instance=obj).exists()
 
 

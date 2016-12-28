@@ -1,7 +1,7 @@
 import datetime
 import dateutil.parser
 from collections import defaultdict
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Union
 
 from .models import Class, Student, Meeting, Building, Room, MeetingInstance, Lecturer
 
@@ -22,9 +22,10 @@ def parse_events(events: List[Dict[Any, Any]]) -> List[Event]:
         return datetime.datetime.strptime(val, '%Y-%m-%d %X').time()
 
     def make_date(val: str) -> datetime.date:
+        print(val)
         return dateutil.parser.parse(val).date()
 
-    def parse_name(val: str) -> str:
+    def parse_name(val: str) -> Union[str, None]:
         if val is None:
             return val
 
@@ -43,6 +44,7 @@ def parse_events(events: List[Dict[Any, Any]]) -> List[Event]:
 
     parsed_events = []
     for event in events:
+        print(event)
         new_event = {keep_key[0]: keep_key[1](event.get(keep_key[0], None)) for keep_key in keys_and_transforms}
 
         parsed_events.append(new_event)

@@ -4,9 +4,10 @@ import datetime
 import requests
 from django.contrib.auth.models import User
 from django.db import transaction
+from rest_framework import status
 from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
-from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
+from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError, NotAuthenticated
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from .auth import ExpiringTokenAuthentication
@@ -15,7 +16,7 @@ from .models import Room, Beacon, Building, Student, Class, Meeting, MeetingInst
 from .permissions import IsUser
 from .serializers import RoomSerializer, BeaconSerializer, BuildingSerializer, StudentDeserializer, ClassSerializer, \
     MeetingSerializer, StudentSerializer, MeetingInstanceSerializer, TimetableSerializer, AttendanceRecordSerializer, \
-    BeaconDeserializer
+    BeaconDeserializer, FriendSerializer, FriendDeserializer, AllowedTimetableSerializer
 
 
 class RoomViewSet(viewsets.ReadOnlyModelViewSet):
@@ -107,17 +108,84 @@ class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
     permission_classes = (IsUser,)
 
 
-class TimetableViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin):
+    authentication_classes = (ExpiringTokenAuthentication,)
+    serializer_class = FriendSerializer
+    permission_classes = (IsAuthenticated,)
+    lookup_field = 'user__username'
+
+    def create(self, request, *args, **kwargs):
+        student = self.get_queryset()[0]
+
+        serializer = FriendDeserializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_share_username = serializer.validated_data
+
+        share_student = Student.objects.get(user__username=new_share_username['username'])
+
+        if share_student == student:
+            raise ParseError(detail="Can't add self as a friend")
+
+        student.shared_with.add(share_student)
+        student.save()
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        student = self.get_queryset()[0]
+
+        remove_share_username = kwargs['user__username']
+
+        try:
+            share_student = Student.objects.get(user__username=remove_share_username)
+        except Student.DoesNotExist:
+            raise NotFound(detail="Can't remove, no such friend")
+
+        if share_student == student:
+            raise ParseError(detail="Can't remove self")
+
+        if not student.shared_with.filter(user__username=share_student.user.username).exists():
+            raise NotFound(detail="Can't remove, no such friend")
+
+        student.shared_with.remove(share_student)
+        student.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_queryset(self):
+        return Student.objects.filter(user=self.request.user)
+
+
+class TimetableViewSet(viewsets.ViewSet):
     """
     Contains the views which present MeetingInstance information in a
     client friendly manner
     """
     authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
-    serializer_class = TimetableSerializer
+    lookup_field = 'username'
 
-    def get_queryset(self):
-        meetings = self.request.user.student.meeting_set.all()
+    def list(self, request, format=None):
+        student = self.request.user.student
+
+        return Response(AllowedTimetableSerializer(student, context={'request': request}).data)
+
+    def retrieve(self, request, username=None, format=None):
+        student = self.request.user.student
+        timetable_username = username
+
+        try:
+            timetable_student = Student.objects.get(user__username=timetable_username)
+        except Student.DoesNotExist:
+            raise NotAuthenticated(detail="You do not have permission to view this timetable")
+
+        if timetable_student == student or student.shared_from.filter(pk=timetable_student.pk).exists():
+            return Response(
+                TimetableSerializer(self.get_meetings(timetable_student), many=True, context={'student': student, 'request':request}).data)
+        raise NotAuthenticated(detail="You do not have permission to view this timetable")
+
+    def get_meetings(self, student: Student):
+        meetings = student.meeting_set.all()
 
         queryset = MeetingInstance.objects.filter(meeting__in=meetings)
 
@@ -177,4 +245,5 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
 
         record = AttendanceRecord.objects.get_or_create(student=student, meeting_instance=meeting_instance)[0]
 
-        return Response(AttendanceRecordSerializer(record, context={'request': request}).data)
+        return Response(AttendanceRecordSerializer(record, context={'request': request}).data,
+                        status=status.HTTP_201_CREATED)
