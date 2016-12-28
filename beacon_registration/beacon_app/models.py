@@ -1,8 +1,12 @@
 import calendar
+import datetime
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
+from django.db.models import QuerySet
+from typing import Dict
 
 
 class Student(models.Model):
@@ -16,12 +20,22 @@ class Student(models.Model):
         return self.user.username
 
     @property
-    def classes(self):
+    def classes(self) -> QuerySet:
         """
         :return: A QuerySet containing of all the Class objects that this student has at least one Meeting for
         """
         class_ids = self.meeting_set.values('class_rel').distinct()
         return Class.objects.filter(pk__in=class_ids)
+
+    @property
+    def attendances(self) -> Dict['Class', float]:
+        classes = self.classes
+
+        attendances = {}
+        for class_ in classes:
+            attendances[class_] = class_.attendance(self)
+
+        return attendances
 
     @property
     def username(self):
@@ -75,6 +89,7 @@ class Room(models.Model):
     class Meta:
         unique_together = ('building', 'room_code')
 
+    @property
     def has_beacon(self):
         return self.beacons.exists()
 
@@ -90,6 +105,23 @@ class Class(models.Model):
 
     class Meta:
         verbose_name_plural = 'Classes'
+
+    def attendance(self, student: Student) -> float:
+        today = datetime.date.today()
+        time_now = datetime.datetime.now().time()
+        meetings = student.meeting_set.filter(class_rel=self)
+        instances = MeetingInstance.objects.filter(meeting=meetings)
+        contributing = instances.filter((Q(date__lt=today) | Q(date=today, meeting__time_start__gte=time_now)) & Q(room__beacons__isnull=False))
+
+        count = 0
+        for instance in contributing:
+            if instance.attended_by(student):
+                count += 1
+
+        if contributing.count() != 0:
+            return count / contributing.count()
+        else:
+            return 100.0
 
     def __str__(self):
         return self.class_code
@@ -150,6 +182,9 @@ class MeetingInstance(models.Model):
             raise ValidationError("This instance's date falls on a {}, but its related Meeting is on a {}".format(
                 calendar.day_name[self.date.weekday()],
                 self.meeting.weekday()))
+
+    def attended_by(self, student: Student):
+        return AttendanceRecord.objects.filter(meeting_instance=self, student=student).exists()
 
     def save(self, *args, **kwargs):
         self.full_clean()

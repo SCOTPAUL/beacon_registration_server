@@ -53,6 +53,19 @@ class FriendDeserializer(serializers.Serializer):
         return value
 
 
+class ReservedNameSerializer(serializers.Serializer):
+    """Allows the usage of reserved fieldnames by appending a '_' to the field name in a subclass"""
+
+    def __init__(self, *args, **kwargs):
+        super(ReservedNameSerializer, self).__init__(*args, **kwargs)
+
+        fields = self.fields
+
+        for field_name in fields:
+            if field_name.endswith("_"):
+                fields[field_name[:-1]] = fields.pop(field_name)
+
+
 class ReservedNameHyperlinkedModelSerializer(serializers.HyperlinkedModelSerializer):
     """Allows the usage of reserved fieldnames by appending a '_' to the field name in a subclass"""
 
@@ -106,12 +119,28 @@ class FriendSerializer(serializers.ModelSerializer):
 
 
 class AllowedTimetableSerializer(serializers.ModelSerializer):
-    my_timetable = serializers.HyperlinkedRelatedField(view_name='timetable-detail', read_only=True, lookup_field='username', source='user')
-    shared_with_me = serializers.HyperlinkedRelatedField(view_name='timetable-detail', many=True, read_only=True, source='shared_from', lookup_field='username')
+    me = serializers.HyperlinkedRelatedField(view_name='timetable-detail', read_only=True,
+                                                       lookup_field='username', source='user')
+    shared_with_me = serializers.HyperlinkedRelatedField(view_name='timetable-detail', many=True, read_only=True,
+                                                         source='shared_from', lookup_field='username')
+
+    def __init__(self, *args, **kwargs):
+        base_view = kwargs.pop('base_view')
+
+        super(AllowedTimetableSerializer, self).__init__(*args, **kwargs)
+
+        if base_view is None:
+            raise ValueError("No base_view provided")
+
+        self.fields['me'].view_name = base_view + '-detail'
+        self.fields['shared_with_me'].child_relation.view_name = base_view + '-detail'
+
+        print(self.fields)
 
     class Meta:
         model = Student
-        fields = ('my_timetable', 'shared_with_me')
+        fields = ('me', 'shared_with_me')
+
 
 class TimetableSerializer(serializers.Serializer):
     time_start = serializers.TimeField(source='meeting.time_start', read_only=True)

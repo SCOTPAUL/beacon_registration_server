@@ -9,14 +9,16 @@ from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError, NotAuthenticated
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.reverse import reverse
+from rest_framework.viewsets import ViewSet
+
 from .auth import ExpiringTokenAuthentication
 from .meetingbuilder import get_or_create_meetings
 from .models import Room, Beacon, Building, Student, Class, Meeting, MeetingInstance, AttendanceRecord
 from .permissions import IsUser
-from .serializers import RoomSerializer, BeaconSerializer, BuildingSerializer, StudentDeserializer, ClassSerializer, \
-    MeetingSerializer, StudentSerializer, MeetingInstanceSerializer, TimetableSerializer, AttendanceRecordSerializer, \
-    BeaconDeserializer, FriendSerializer, FriendDeserializer, AllowedTimetableSerializer
+from .serializers import *
 
 
 class RoomViewSet(viewsets.ReadOnlyModelViewSet):
@@ -156,6 +158,18 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
         return Student.objects.filter(user=self.request.user)
 
 
+def viewable_students(request: Request, view_base, format=None) -> Response:
+    """
+    A generic view for listing which resources are accessible by the Student sending this request
+    :param view_base: the base_name of the view to use for the lookup
+    :param request: the Request provided to the calling view
+    :param format: the format of the response
+    :return: a Response showing which resources of this type are available
+    """
+    student = request.user.student
+    return Response(AllowedTimetableSerializer(student, base_view=view_base, context={'request': request}).data)
+
+
 class TimetableViewSet(viewsets.ViewSet):
     """
     Contains the views which present MeetingInstance information in a
@@ -166,9 +180,7 @@ class TimetableViewSet(viewsets.ViewSet):
     lookup_field = 'username'
 
     def list(self, request, format=None):
-        student = self.request.user.student
-
-        return Response(AllowedTimetableSerializer(student, context={'request': request}).data)
+        return viewable_students(request, 'timetable', format)
 
     def retrieve(self, request, username=None, format=None):
         student = self.request.user.student
@@ -181,7 +193,8 @@ class TimetableViewSet(viewsets.ViewSet):
 
         if timetable_student == student or student.shared_from.filter(pk=timetable_student.pk).exists():
             return Response(
-                TimetableSerializer(self.get_meetings(timetable_student), many=True, context={'student': student, 'request':request}).data)
+                TimetableSerializer(self.get_meetings(timetable_student), many=True,
+                                    context={'student': student, 'request': request}).data)
         raise NotAuthenticated(detail="You do not have permission to view this timetable")
 
     def get_meetings(self, student: Student):
@@ -211,6 +224,32 @@ class TimetableViewSet(viewsets.ViewSet):
                 return queryset
         except ValueError:
             raise ParseError(detail="Filtering parameter was not in a valid format")
+
+
+class AttendancePercentageViewSet(viewsets.ViewSet):
+    authentication_classes = (ExpiringTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    lookup_field = 'username'
+
+    def list(self, request, format=None):
+        return viewable_students(request, 'attendance', format)
+
+    def retrieve(self, request, username=None, format=None):
+        student = self.request.user.student
+        timetable_username = username
+
+        try:
+            timetable_student = Student.objects.get(user__username=timetable_username)
+        except Student.DoesNotExist:
+            raise NotAuthenticated(detail="You do not have permission to view these attendances")
+
+        if timetable_student == student or student.shared_from.filter(pk=timetable_student.pk).exists():
+            print(timetable_student.attendances)
+            urls_dict = {str(k): {'url': reverse('class-detail', args=[k.pk], request=request), 'percentage': v} for k, v in
+                         timetable_student.attendances.items()}
+
+            return Response(urls_dict)
+        raise NotAuthenticated(detail="You do not have permission to view these attendances")
 
 
 class AttendanceRecordViewSet(viewsets.ViewSet):
