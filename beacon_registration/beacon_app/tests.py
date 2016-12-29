@@ -15,6 +15,8 @@ class TimetableConstruction(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='2072452q')
         self.student = Student.objects.create(user=self.user)
+        self.token = Token.objects.create(user=self.user)
+
 
     def test_construction(self):
         f = open('beacon_app/testdata/events.json', 'r')
@@ -53,15 +55,12 @@ class TimetableConstruction(TestCase):
         inactive_meetings = get_or_create_meetings(data, self.student)
         inactive_meetings = get_or_create_meetings([], self.student)
 
-        factory = APIRequestFactory()
-        view = TimetableViewSet.as_view({'get': 'list'})
+        client = RequestsClient()
+        client.headers.update({'Authorization': 'Token ' + str(self.token.key)})
 
-        request = factory.get('/timetables/')
+        response = client.get('http://testserver/api/timetables/2072452q/?day=2016-09-26')
 
-        force_authenticate(request, user=self.user)
-        response = view(request)
-
-        self.assertEqual(len(response.data), 0)
+        self.assertEqual(len(response.json()), 0)
 
     def test_timetable_correct(self):
         f = open('beacon_app/testdata/events.json', 'r')
@@ -71,16 +70,13 @@ class TimetableConstruction(TestCase):
 
         inactive_meetings = get_or_create_meetings(data, self.student)
 
-        factory = APIRequestFactory()
-        view = TimetableViewSet.as_view({'get': 'list'})
+        client = RequestsClient()
+        client.headers.update({'Authorization': 'Token ' + str(self.token.key)})
 
-        request = factory.get('/timetables/?day=2016-09-26')
-
-        force_authenticate(request, user=self.user)
-        response = view(request)
+        response = client.get('http://testserver/api/timetables/2072452q/?day=2016-09-26')
 
         self.assertTrue(
-            any(entry['time_start'] == '12:00:00' and entry['class_name'] == 'CVMA (H)' for entry in response.data))
+            any(entry['time_start'] == '12:00:00' and entry['class_name'] == 'CVMA (H)' for entry in response.json()))
 
 
 class Tokens(TestCase):
@@ -129,6 +125,7 @@ class AttendanceRecords(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='2072452q')
         self.student = Student.objects.create(user=self.user)
+        self.token = Token.objects.create(user=self.user)
         self.building = Building.objects.create(name="My House")
         self.beaconed_room = Room.objects.create(building=self.building, room_code="My Room")
         self.unbeaconed_room = Room.objects.create(building=self.building, room_code="Not My Room")
@@ -155,11 +152,11 @@ class AttendanceRecords(TestCase):
         factory = APIRequestFactory()
 
         # Check not marked as attended
-        view = TimetableViewSet.as_view({'get': 'list'})
-        request = factory.get('/timetables/?day=2016-12-5')
-        force_authenticate(request, user=self.user)
-        response = view(request)
-        self.assertFalse(response.data[0]['attended'])
+        client = RequestsClient()
+        client.headers.update({'Authorization': 'Token ' + str(self.token.key)})
+        response = client.get('http://testserver/api/timetables/2072452q/?day=2016-12-5')
+
+        self.assertFalse(response.json()[0]['attended'])
 
         # Add attendance record
         view = AttendanceRecordViewSet.as_view({'post': 'create'})
@@ -167,14 +164,13 @@ class AttendanceRecords(TestCase):
         request = factory.post('/attendance-records/', beacon_data)
         force_authenticate(request, user=self.user)
         response = view(request)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)  # 201 Created
 
         # Check marked as attended
-        view = TimetableViewSet.as_view({'get': 'list'})
-        request = factory.get('/timetables/?day=2016-12-5')
-        force_authenticate(request, user=self.user)
-        response = view(request)
-        self.assertTrue(response.data[0]['attended'])
+        client = RequestsClient()
+        client.headers.update({'Authorization': 'Token ' + str(self.token.key)})
+        response = client.get('http://testserver/api/timetables/2072452q/?day=2016-12-5')
+        self.assertTrue(response.json()[0]['attended'])
 
     @freeze_time("Dec 5th, 2016 11:00:00")
     def test_wrong_time(self):

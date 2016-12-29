@@ -136,8 +136,6 @@ class AllowedTimetableSerializer(serializers.ModelSerializer):
         self.fields['me'].view_name = base_view + '-detail'
         self.fields['shared_with_me'].child_relation.view_name = base_view + '-detail'
 
-        print(self.fields)
-
     class Meta:
         model = Student
         fields = ('me', 'shared_with_me')

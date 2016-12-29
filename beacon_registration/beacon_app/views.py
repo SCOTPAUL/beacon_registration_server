@@ -180,7 +180,7 @@ class TimetableViewSet(viewsets.ViewSet):
     permission_classes = (IsAuthenticated, IsUserOrSharedWithUser)
     lookup_field = 'username'
 
-    def get_object(self, username):
+    def get_object(self, username: str) -> Student:
         obj = get_object_or_404(Student, user__username=username)
         self.check_object_permissions(self.request, obj)
         return obj
@@ -228,7 +228,7 @@ class AttendancePercentageViewSet(viewsets.ViewSet):
     permission_classes = (IsAuthenticated, IsUserOrSharedWithUser)
     lookup_field = 'username'
 
-    def get_object(self, username):
+    def get_object(self, username: str) -> Student:
         obj = get_object_or_404(Student, user__username=username)
         self.check_object_permissions(self.request, obj)
         return obj

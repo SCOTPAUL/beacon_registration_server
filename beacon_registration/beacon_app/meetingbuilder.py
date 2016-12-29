@@ -23,8 +23,11 @@ def parse_events(events: EventsJson) -> List[Event]:
     def make_time(val: str) -> datetime.time:
         return datetime.datetime.strptime(val, '%Y-%m-%d %X').time()
 
-    def make_date(val: int) -> datetime.date:
-        return datetime.datetime.utcfromtimestamp(val / 1000).date()
+    def make_date(val: Union[int, str]) -> datetime.date:
+        if type(val) == int:
+            return datetime.datetime.utcfromtimestamp(val / 1000).date()
+        elif type(val) == str:
+            return dateutil.parser.parse(val).date()
 
     def parse_name(val: str) -> Union[str, None]:
         if val is None:
