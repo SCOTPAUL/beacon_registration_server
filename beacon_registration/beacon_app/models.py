@@ -14,7 +14,7 @@ class Student(models.Model):
     Representation of a student
     """
     user = models.OneToOneField(User, unique=True)
-    shared_with = models.ManyToManyField('Student', related_name='shared_from')
+    shared_with = models.ManyToManyField('Student', related_name='shared_from', blank=True)
 
     def __str__(self):
         return self.user.username

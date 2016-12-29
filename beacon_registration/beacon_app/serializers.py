@@ -103,6 +103,7 @@ class ClassSerializer(serializers.HyperlinkedModelSerializer):
 
 class StudentSerializer(serializers.HyperlinkedModelSerializer):
     username = serializers.CharField(source='user.username')
+    classes = serializers.HyperlinkedRelatedField(view_name='class-detail', many=True, read_only=True)
 
     class Meta:
         model = Student

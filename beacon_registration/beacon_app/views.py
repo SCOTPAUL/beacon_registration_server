@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError, NotAuthenticated
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -17,7 +18,7 @@ from rest_framework.viewsets import ViewSet
 from .auth import ExpiringTokenAuthentication
 from .meetingbuilder import get_or_create_meetings
 from .models import Room, Beacon, Building, Student, Class, Meeting, MeetingInstance, AttendanceRecord
-from .permissions import IsUser
+from .permissions import IsUser, IsUserOrSharedWithUser
 from .serializers import *
 
 
@@ -107,7 +108,7 @@ class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
     serializer_class = StudentSerializer
     lookup_field = 'user__username'
     authentication_classes = (ExpiringTokenAuthentication,)
-    permission_classes = (IsUser,)
+    permission_classes = (IsAuthenticated, IsUser)
 
 
 class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin):
@@ -176,8 +177,13 @@ class TimetableViewSet(viewsets.ViewSet):
     client friendly manner
     """
     authentication_classes = (ExpiringTokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsUserOrSharedWithUser)
     lookup_field = 'username'
+
+    def get_object(self, username):
+        obj = get_object_or_404(Student, user__username=username)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def list(self, request, format=None):
         return viewable_students(request, 'timetable', format)
@@ -185,17 +191,8 @@ class TimetableViewSet(viewsets.ViewSet):
     def retrieve(self, request, username=None, format=None):
         student = self.request.user.student
         timetable_username = username
-
-        try:
-            timetable_student = Student.objects.get(user__username=timetable_username)
-        except Student.DoesNotExist:
-            raise NotAuthenticated(detail="You do not have permission to view this timetable")
-
-        if timetable_student == student or student.shared_from.filter(pk=timetable_student.pk).exists():
-            return Response(
-                TimetableSerializer(self.get_meetings(timetable_student), many=True,
-                                    context={'student': student, 'request': request}).data)
-        raise NotAuthenticated(detail="You do not have permission to view this timetable")
+        timetable_student = self.get_object(timetable_username)
+        return Response(TimetableSerializer(self.get_meetings(timetable_student), many=True, context={'student': student, 'request': request}).data)
 
     def get_meetings(self, student: Student):
         meetings = student.meeting_set.all()
@@ -228,28 +225,25 @@ class TimetableViewSet(viewsets.ViewSet):
 
 class AttendancePercentageViewSet(viewsets.ViewSet):
     authentication_classes = (ExpiringTokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsUserOrSharedWithUser)
     lookup_field = 'username'
+
+    def get_object(self, username):
+        obj = get_object_or_404(Student, user__username=username)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def list(self, request, format=None):
         return viewable_students(request, 'attendance', format)
 
     def retrieve(self, request, username=None, format=None):
-        student = self.request.user.student
         timetable_username = username
+        timetable_student = self.get_object(timetable_username)
 
-        try:
-            timetable_student = Student.objects.get(user__username=timetable_username)
-        except Student.DoesNotExist:
-            raise NotAuthenticated(detail="You do not have permission to view these attendances")
+        urls_dict = {str(k): {'url': reverse('class-detail', args=[k.pk], request=request), 'percentage': v} for k, v in
+                     timetable_student.attendances.items()}
 
-        if timetable_student == student or student.shared_from.filter(pk=timetable_student.pk).exists():
-            print(timetable_student.attendances)
-            urls_dict = {str(k): {'url': reverse('class-detail', args=[k.pk], request=request), 'percentage': v} for k, v in
-                         timetable_student.attendances.items()}
-
-            return Response(urls_dict)
-        raise NotAuthenticated(detail="You do not have permission to view these attendances")
+        return Response(urls_dict)
 
 
 class AttendanceRecordViewSet(viewsets.ViewSet):
