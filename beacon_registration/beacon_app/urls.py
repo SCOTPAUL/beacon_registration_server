@@ -14,6 +14,7 @@ router.register(r'timetables', TimetableViewSet, base_name='timetable')
 router.register(r'attendance-records', AttendanceRecordViewSet, base_name='attendance-record')
 router.register(r'friends', FriendViewSet, base_name='friend')
 router.register(r'attendances', AttendancePercentageViewSet, base_name='attendance')
+router.register(r'streaks', StreakViewSet, base_name='streak')
 
 
 urlpatterns = router.urls

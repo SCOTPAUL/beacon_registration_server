@@ -6,7 +6,9 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.db.models import QuerySet
-from typing import Dict
+from typing import Dict, Tuple, List
+
+from beacon_app.utils import Streak
 
 
 class Student(models.Model):
@@ -29,13 +31,24 @@ class Student(models.Model):
 
     @property
     def attendances(self) -> Dict['Class', float]:
-        classes = self.classes
-
         attendances = {}
-        for class_ in classes:
+        for class_ in self.classes:
             attendances[class_] = class_.attendance(self)
 
         return attendances
+
+    def class_streaks(self, class_: 'Class'):
+        return class_.attendance_streaks(self)
+
+    @property
+    def streaks(self) -> Dict['Class', List[Streak]]:
+        streaks = {}
+
+        for class_ in self.classes:
+            streaks[class_] = class_.attendance_streaks(self)
+
+        return streaks
+
 
     @property
     def username(self):
@@ -110,7 +123,7 @@ class Class(models.Model):
         today = datetime.date.today()
         time_now = datetime.datetime.now().time()
         meetings = student.meeting_set.filter(class_rel=self)
-        instances = MeetingInstance.objects.filter(meeting=meetings)
+        instances = MeetingInstance.objects.filter(meeting__in=meetings)
         contributing = instances.filter((Q(date__lt=today) | Q(date=today, meeting__time_start__gte=time_now)) & Q(room__beacons__isnull=False))
 
         count = 0
@@ -122,6 +135,46 @@ class Class(models.Model):
             return count / contributing.count()
         else:
             return 100.0
+
+    def attendance_streaks(self, student: Student) -> List[Streak]:
+        today = datetime.date.today()
+        time_now = datetime.datetime.now().time()
+        meetings = student.meeting_set.filter(class_rel=self)
+
+        instances = MeetingInstance.objects.filter(meeting__in=meetings)
+        contributing = instances.filter((Q(date__lt=today) | Q(date=today, meeting__time_end__lte=time_now)) & Q(room__beacons__isnull=False))
+        sorted_ = contributing.order_by('date')
+
+        streaks = []
+
+        streak_start = None
+        for instance in sorted_:
+            attended = instance.attended_by(student)
+
+            if attended and streak_start is None:
+                # Start of a streak
+                streak_start = instance
+            elif not attended and streak_start is not None:
+                # End of a streak
+                streaks.append(Streak(streak_start.date, instance.date))
+                streak_start = None
+
+        if streak_start is not None:
+            # A streak started, but has not yet ended
+            valid_instances = instances.filter(room__beacons__isnull=False).order_by('-date')
+            if len(valid_instances) > 0:
+                last_date_of_year = valid_instances[0].date
+            else:
+                last_date_of_year = today
+
+            if last_date_of_year > today:
+                # There is another meeting after today, so the streak can go to today
+                streaks.append(Streak(streak_start.date, today))
+            else:
+                # There are no more meetings after today, so just set the streak as reaching to the last meeting
+                streaks.append(Streak(streak_start.date, last_date_of_year))
+
+        return streaks
 
     def __str__(self):
         return self.class_code

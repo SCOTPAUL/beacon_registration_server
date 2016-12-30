@@ -1,5 +1,7 @@
+import dateutil.parser
 from rest_framework import serializers
 
+from .utils import Streak
 from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord
 
 
@@ -157,8 +159,8 @@ class TimetableSerializer(serializers.Serializer):
         # Instantiate the superclass normally
         super(TimetableSerializer, self).__init__(*args, **kwargs)
 
-        for meetinginstance in self.instance:
-            meetinginstance._attended = self.did_attend(meetinginstance)
+        for meeting_instance in self.instance:
+            meeting_instance._attended = self.did_attend(meeting_instance)
 
     def did_attend(self, obj):
         student = self.context['student']
@@ -169,3 +171,46 @@ class AttendanceRecordSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = AttendanceRecord
         fields = ('meeting_instance',)
+
+
+class StreakField(serializers.Field):
+
+    def __init__(self, many=False, *args, **kwargs):
+        self.many = many
+
+        super(StreakField, self).__init__(*args, **kwargs)
+
+    def to_representation(self, value, many=None):
+        if many is None:
+            many = self.many
+
+        if many:
+            reprs = []
+            for v in value:
+                reprs.append(self.to_representation(v, False))
+            return reprs
+
+        return str(value)
+
+    def to_internal_value(self, data) -> Streak:
+        if self.many:
+            raise NotImplementedError("Not implemented")
+
+        start_str, end_str = data.split('/', 1)
+
+        start = dateutil.parser.parse(start_str).date()
+        end = dateutil.parser.parse(end_str).date()
+
+        return Streak(start, end)
+
+
+class StreaksSerializer(serializers.Serializer):
+    url = serializers.HyperlinkedIdentityField(view_name='class-detail', read_only=True)
+    class_name = serializers.StringRelatedField(source='class_code')
+    streaks = StreakField(read_only=True, many=True, source='_streaks')
+
+    def __init__(self, *args, **kwargs):
+        super(StreaksSerializer, self).__init__(*args, **kwargs)
+
+        for class_ in self.instance:
+            class_._streaks = class_.attendance_streaks(self.context['student'])

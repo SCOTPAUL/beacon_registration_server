@@ -11,12 +11,15 @@ from .models import Student, Meeting, Class, Building, Room, MeetingInstance, Be
 from .views import TimetableViewSet, AttendanceRecordViewSet
 
 
-class TimetableConstruction(TestCase):
+class Timetables(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='2072452q')
+        self.user2 = User.objects.create_user(username='2072452n')
+        self.user3 = User.objects.create_user(username='2072452y')
         self.student = Student.objects.create(user=self.user)
+        self.student2 = Student.objects.create(user=self.user2)
+        self.student3 = Student.objects.create(user=self.user3)
         self.token = Token.objects.create(user=self.user)
-
 
     def test_construction(self):
         f = open('beacon_app/testdata/events.json', 'r')
@@ -77,6 +80,33 @@ class TimetableConstruction(TestCase):
 
         self.assertTrue(
             any(entry['time_start'] == '12:00:00' and entry['class_name'] == 'CVMA (H)' for entry in response.json()))
+
+    def test_access_shared_timetables(self):
+        self.student3.shared_with.add(self.student)
+
+        # Self
+        client = RequestsClient()
+        client.headers.update({'Authorization': 'Token ' + str(self.token.key)})
+        response = client.get('http://testserver/api/timetables/2072452q/')
+        self.assertEqual(response.status_code, 200)
+
+        # Shared
+        client = RequestsClient()
+        client.headers.update({'Authorization': 'Token ' + str(self.token.key)})
+        response = client.get('http://testserver/api/timetables/2072452y/')
+        self.assertEqual(response.status_code, 200)
+
+        # Not shared
+        client = RequestsClient()
+        client.headers.update({'Authorization': 'Token ' + str(self.token.key)})
+        response = client.get('http://testserver/api/timetables/2072452n/')
+        self.assertEqual(response.status_code, 403)
+
+        # Non existent
+        client = RequestsClient()
+        client.headers.update({'Authorization': 'Token ' + str(self.token.key)})
+        response = client.get('http://testserver/api/timetables/2072452z/')
+        self.assertEqual(response.status_code, 404)
 
 
 class Tokens(TestCase):

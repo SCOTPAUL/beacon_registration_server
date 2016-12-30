@@ -243,6 +243,10 @@ class AttendancePercentageViewSet(viewsets.ViewSet):
         urls_dict = {str(k): {'url': reverse('class-detail', args=[k.pk], request=request), 'percentage': v} for k, v in
                      timetable_student.attendances.items()}
 
+        for c in timetable_student.classes:
+            print(c, c.attendance_streaks(timetable_student))
+
+
         return Response(urls_dict)
 
 
@@ -280,3 +284,22 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
 
         return Response(AttendanceRecordSerializer(record, context={'request': request}).data,
                         status=status.HTTP_201_CREATED)
+
+class StreakViewSet(viewsets.ViewSet):
+    authentication_classes = (ExpiringTokenAuthentication,)
+    permission_classes = (IsAuthenticated, IsUserOrSharedWithUser)
+    lookup_field = 'username'
+
+    def get_object(self, username: str) -> Student:
+        obj = get_object_or_404(Student, user__username=username)
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def list(self, request, format=None):
+        return viewable_students(request, 'streak', format)
+
+    def retrieve(self, request, username=None, format=None):
+        timetable_username = username
+        timetable_student = self.get_object(timetable_username)
+
+        return Response(StreaksSerializer(timetable_student.classes, many=True, context={'request': request, 'student': timetable_student}).data)
