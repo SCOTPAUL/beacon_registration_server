@@ -302,4 +302,4 @@ class StreakViewSet(viewsets.ViewSet):
         timetable_username = username
         timetable_student = self.get_object(timetable_username)
 
-        return Response(StreaksSerializer(timetable_student.classes, many=True, context={'request': request, 'student': timetable_student}).data)
+        return Response(StreaksSerializer(timetable_student, context={'request': request, 'student': timetable_student}).data)

@@ -1,5 +1,4 @@
 import datetime
-from json import JSONEncoder
 
 
 class Streak:

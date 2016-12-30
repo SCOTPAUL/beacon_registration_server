@@ -203,14 +203,27 @@ class StreakField(serializers.Field):
 
         return Streak(start, end)
 
-
-class StreaksSerializer(serializers.Serializer):
+class ClassStreaksSerializer(serializers.Serializer):
     url = serializers.HyperlinkedIdentityField(view_name='class-detail', read_only=True)
     class_name = serializers.StringRelatedField(source='class_code')
-    streaks = StreakField(read_only=True, many=True, source='_streaks')
+    streaks = StreakField(read_only=True, source='_streaks', many=True)
+
+    def to_representation(self, instance):
+        # A bit of a hack since otherwise we don't have the required instance access
+        instance._streaks = instance.attendance_streaks(self.context['student'])
+        serialized = super(ClassStreaksSerializer, self).to_representation(instance)
+        return serialized
+
+class StreaksSerializer(serializers.ModelSerializer):
+    overall = StreakField(read_only=True, many=True, source='overall_streaks')
 
     def __init__(self, *args, **kwargs):
         super(StreaksSerializer, self).__init__(*args, **kwargs)
 
-        for class_ in self.instance:
-            class_._streaks = class_.attendance_streaks(self.context['student'])
+        # Need to do this here so that we have access to the context
+        self.fields['class_streaks'] = ClassStreaksSerializer(many=True, context=self.context, source='classes')
+
+
+    class Meta:
+        model = Student
+        fields = ('overall', 'class_streaks')
