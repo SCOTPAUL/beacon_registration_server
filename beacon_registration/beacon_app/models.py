@@ -1,12 +1,12 @@
 import calendar
 import datetime
+from typing import Dict, List, Union
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.db.models import QuerySet
-from typing import Dict, Tuple, List, Union
 
 from beacon_app.utils import Streak
 
@@ -146,7 +146,7 @@ class Class(models.Model):
                 count += 1
 
         if contributing.count() != 0:
-            return count / contributing.count()
+            return (count / contributing.count()) * 100.0
         else:
             return 100.0
 

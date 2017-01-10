@@ -123,7 +123,7 @@ class FriendSerializer(serializers.ModelSerializer):
 
 class AllowedTimetableSerializer(serializers.ModelSerializer):
     me = serializers.HyperlinkedRelatedField(view_name='timetable-detail', read_only=True,
-                                                       lookup_field='username', source='user')
+                                             lookup_field='username', source='user')
     shared_with_me = serializers.HyperlinkedRelatedField(view_name='timetable-detail', many=True, read_only=True,
                                                          source='shared_from', lookup_field='username')
 
@@ -174,7 +174,6 @@ class AttendanceRecordSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class StreakField(serializers.Field):
-
     def __init__(self, many=False, *args, **kwargs):
         self.many = many
 
@@ -203,6 +202,7 @@ class StreakField(serializers.Field):
 
         return Streak(start, end)
 
+
 class ClassStreaksSerializer(serializers.Serializer):
     url = serializers.HyperlinkedIdentityField(view_name='class-detail', read_only=True)
     class_name = serializers.StringRelatedField(source='class_code')
@@ -214,6 +214,7 @@ class ClassStreaksSerializer(serializers.Serializer):
         serialized = super(ClassStreaksSerializer, self).to_representation(instance)
         return serialized
 
+
 class StreaksSerializer(serializers.ModelSerializer):
     overall = StreakField(read_only=True, many=True, source='overall_streaks')
 
@@ -222,7 +223,6 @@ class StreaksSerializer(serializers.ModelSerializer):
 
         # Need to do this here so that we have access to the context
         self.fields['class_streaks'] = ClassStreaksSerializer(many=True, context=self.context, source='classes')
-
 
     class Meta:
         model = Student

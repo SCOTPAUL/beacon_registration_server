@@ -1,25 +1,20 @@
-import calendar
-import datetime
-
 import requests
-from django.contrib.auth.models import User
 from django.db import transaction
 from rest_framework import status
 from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
-from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError, NotAuthenticated
+from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
-from rest_framework.viewsets import ViewSet
 
 from .auth import ExpiringTokenAuthentication
 from .meetingbuilder import get_or_create_meetings
-from .models import Room, Beacon, Building, Student, Class, Meeting, MeetingInstance, AttendanceRecord
 from .permissions import IsUser, IsUserOrSharedWithUser
 from .serializers import *
+from .models import *
 
 
 class RoomViewSet(viewsets.ReadOnlyModelViewSet):
@@ -117,8 +112,13 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
     permission_classes = (IsAuthenticated,)
     lookup_field = 'user__username'
 
+    def list(self, request, *args, **kwargs):
+        student = self.get_object()
+
+        return Response(FriendSerializer(student).data)
+
     def create(self, request, *args, **kwargs):
-        student = self.get_queryset()[0]
+        student = self.get_object()
 
         serializer = FriendDeserializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -135,7 +135,7 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
-        student = self.get_queryset()[0]
+        student = self.get_object()
 
         remove_share_username = kwargs['user__username']
 
@@ -155,8 +155,8 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_queryset(self):
-        return Student.objects.filter(user=self.request.user)
+    def get_object(self):
+        return self.request.user.student
 
 
 def viewable_students(request: Request, view_base, format=None) -> Response:
@@ -192,7 +192,8 @@ class TimetableViewSet(viewsets.ViewSet):
         student = self.request.user.student
         timetable_username = username
         timetable_student = self.get_object(timetable_username)
-        return Response(TimetableSerializer(self.get_meetings(timetable_student), many=True, context={'student': student, 'request': request}).data)
+        return Response(TimetableSerializer(self.get_meetings(timetable_student), many=True,
+                                            context={'student': student, 'request': request}).data)
 
     def get_meetings(self, student: Student):
         meetings = student.meeting_set.all()
@@ -240,14 +241,13 @@ class AttendancePercentageViewSet(viewsets.ViewSet):
         timetable_username = username
         timetable_student = self.get_object(timetable_username)
 
-        urls_dict = {str(k): {'url': reverse('class-detail', args=[k.pk], request=request), 'percentage': v} for k, v in
-                     timetable_student.attendances.items()}
+        urls_list = [{'class_name': str(k), 'url': reverse('class-detail', args=[k.pk], request=request), 'percentage': v} for k, v in
+                     timetable_student.attendances.items()]
 
         for c in timetable_student.classes:
             print(c, c.attendance_streaks(timetable_student))
 
-
-        return Response(urls_dict)
+        return Response(urls_list)
 
 
 class AttendanceRecordViewSet(viewsets.ViewSet):
@@ -285,6 +285,7 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
         return Response(AttendanceRecordSerializer(record, context={'request': request}).data,
                         status=status.HTTP_201_CREATED)
 
+
 class StreakViewSet(viewsets.ViewSet):
     authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (IsAuthenticated, IsUserOrSharedWithUser)
@@ -302,4 +303,5 @@ class StreakViewSet(viewsets.ViewSet):
         timetable_username = username
         timetable_student = self.get_object(timetable_username)
 
-        return Response(StreaksSerializer(timetable_student, context={'request': request, 'student': timetable_student}).data)
+        return Response(
+            StreaksSerializer(timetable_student, context={'request': request, 'student': timetable_student}).data)
