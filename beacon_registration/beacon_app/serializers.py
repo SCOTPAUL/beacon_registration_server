@@ -144,6 +144,7 @@ class AllowedTimetableSerializer(serializers.ModelSerializer):
 
 
 class TimetableSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
     time_start = serializers.TimeField(source='meeting.time_start', read_only=True)
     time_end = serializers.TimeField(source='meeting.time_end', read_only=True)
     date = serializers.DateField(read_only=True)
