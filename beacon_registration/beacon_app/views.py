@@ -3,6 +3,7 @@ from django.db import transaction
 from rest_framework import status
 from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
+from rest_framework.decorators import detail_route
 from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -94,8 +95,17 @@ class MeetingViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class MeetingInstanceViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = (ExpiringTokenAuthentication,)
     queryset = MeetingInstance.objects.all()
     serializer_class = MeetingInstanceSerializer
+    lookup_field = 'pk'
+
+    @detail_route(methods=['get'], permission_classes=(IsAuthenticated,), url_path='friends-attended')
+    def list_attended_friends(self, request, pk, format=None):
+        shared_from = request.user.student.shared_from
+        attended = shared_from.filter(attendance_records__meeting_instance__pk=pk)
+
+        return Response({'friends_attended': [str(student) for student in attended]})
 
 
 class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
@@ -241,11 +251,10 @@ class AttendancePercentageViewSet(viewsets.ViewSet):
         timetable_username = username
         timetable_student = self.get_object(timetable_username)
 
-        urls_list = [{'class_name': str(k), 'url': reverse('class-detail', args=[k.pk], request=request), 'percentage': v} for k, v in
-                     timetable_student.attendances.items()]
-
-        for c in timetable_student.classes:
-            print(c, c.attendance_streaks(timetable_student))
+        urls_list = [
+            {'class_name': str(k), 'url': reverse('class-detail', args=[k.pk], request=request), 'percentage': v} for
+            k, v in
+            timetable_student.attendances.items()]
 
         return Response(urls_list)
 

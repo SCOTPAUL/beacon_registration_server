@@ -228,9 +228,25 @@ class AttendanceRecord(models.Model):
     meeting_instance = models.ForeignKey('MeetingInstance', related_name='attendance_records')
     student = models.ForeignKey('Student', related_name='attendance_records')
 
+    class Meta:
+        unique_together = ('meeting_instance', 'student')
+
     def __str__(self):
         return "{} attended {}".format(self.student,
                                        self.meeting_instance)
+
+    def clean(self):
+        if self.student not in self.meeting_instance.meeting.students.all():
+            raise ValidationError("Can't create attendance record, student {} is not enrolled in meeting {}".format(
+                self.student,
+                self.meeting_instance.meeting))
+
+    def attended_by(self, student: Student):
+        return AttendanceRecord.objects.filter(meeting_instance=self, student=student).exists()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super(AttendanceRecord, self).save(*args, **kwargs)
 
 
 class ShuffledID(models.Model):

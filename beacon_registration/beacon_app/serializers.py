@@ -82,6 +82,8 @@ class ReservedNameHyperlinkedModelSerializer(serializers.HyperlinkedModelSeriali
 
 
 class MeetingInstanceSerializer(serializers.HyperlinkedModelSerializer):
+    lecturer = serializers.CharField()
+
     class Meta:
         model = MeetingInstance
         fields = ('room', 'date', 'meeting', 'lecturer')
