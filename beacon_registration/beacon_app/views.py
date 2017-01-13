@@ -105,7 +105,7 @@ class MeetingInstanceViewSet(viewsets.ReadOnlyModelViewSet):
         shared_from = request.user.student.shared_from
         attended = shared_from.filter(attendance_records__meeting_instance__pk=pk)
 
-        return Response({'friends_attended': [str(student) for student in attended]})
+        return Response([str(student) for student in attended])
 
 
 class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
