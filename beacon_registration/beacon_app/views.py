@@ -203,7 +203,7 @@ class TimetableViewSet(viewsets.ViewSet):
         timetable_username = username
         timetable_student = self.get_object(timetable_username)
         return Response(TimetableSerializer(self.get_meetings(timetable_student), many=True,
-                                            context={'student': student, 'request': request}).data)
+                                            context={'student': timetable_student, 'request': request}).data)
 
     def get_meetings(self, student: Student):
         meetings = student.meeting_set.all()
