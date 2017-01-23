@@ -136,3 +136,5 @@ REST_FRAMEWORK = {
     ),
     'TOKEN_EXPIRATION': timedelta(hours=24)
 }
+
+SOURCE_CODE_URL = "https://github.com/SCOTPAUL/beacon_registration_server"

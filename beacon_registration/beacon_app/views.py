@@ -10,6 +10,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
+from django.conf import settings
 
 from .auth import ExpiringTokenAuthentication
 from .meetingbuilder import get_or_create_meetings
@@ -314,3 +315,15 @@ class StreakViewSet(viewsets.ViewSet):
 
         return Response(
             StreaksSerializer(timetable_student, context={'request': request, 'student': timetable_student}).data)
+
+
+class SourceViewSet(viewsets.ViewSet):
+    authentication_classes = ()
+    permission_classes = ()
+
+    def list(self, request, format=None):
+        if settings.SOURCE_CODE_URL:
+            return Response("Source code and license available at: " + settings.SOURCE_CODE_URL)
+        else:
+            return Response("There seems to be a configuration error. Please contact the developer at "
+                            "paul.cowie@ntlworld.com")
