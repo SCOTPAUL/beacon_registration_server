@@ -142,7 +142,7 @@ class Class(models.Model):
         instances = MeetingInstance.objects.filter(meeting__in=meetings)
         contributing = instances.filter(
             (Q(date__lt=today) | Q(date=today, meeting__time_start__gte=time_now)) & Q(room__beacons__isnull=False) &
-            Q(room__beacons__date_added__gte=F('date'))
+            Q(room__beacons__date_added__lte=F('date'))
         )
 
         count = 0
