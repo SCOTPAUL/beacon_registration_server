@@ -245,7 +245,8 @@ class AttendancePercentageViewSet(viewsets.ViewSet):
         self.check_object_permissions(self.request, obj)
         return obj
 
-    def list(self, request, format=None):
+    @staticmethod
+    def list(request, format=None):
         return viewable_students(request, 'attendance', format)
 
     def retrieve(self, request, username=None, format=None):
@@ -254,8 +255,7 @@ class AttendancePercentageViewSet(viewsets.ViewSet):
 
         urls_list = [
             {'class_name': str(k), 'url': reverse('class-detail', args=[k.pk], request=request), 'percentage': v} for
-            k, v in
-            timetable_student.attendances.items()]
+            k, v in timetable_student.attendances.items()]
 
         return Response(urls_list)
 

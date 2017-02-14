@@ -5,8 +5,10 @@ from typing import Dict, List, Union
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import F
 from django.db.models import Q
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from beacon_app.utils import Streak
 
@@ -87,6 +89,7 @@ class Beacon(models.Model):
     major = models.IntegerField()
     minor = models.IntegerField()
     room = models.ForeignKey('Room', related_name='beacons')
+    date_added = models.DateField(default=timezone.now)
 
     class Meta:
         unique_together = ('uuid', 'major', 'minor')
@@ -138,7 +141,9 @@ class Class(models.Model):
         meetings = student.meeting_set.filter(class_rel=self)
         instances = MeetingInstance.objects.filter(meeting__in=meetings)
         contributing = instances.filter(
-            (Q(date__lt=today) | Q(date=today, meeting__time_start__gte=time_now)) & Q(room__beacons__isnull=False))
+            (Q(date__lt=today) | Q(date=today, meeting__time_start__gte=time_now)) & Q(room__beacons__isnull=False) &
+            Q(room__beacons__date_added__gte=F('date'))
+        )
 
         count = 0
         for instance in contributing:
