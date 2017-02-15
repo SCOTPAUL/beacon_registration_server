@@ -118,12 +118,14 @@ class Room(models.Model):
     class Meta:
         unique_together = ('building', 'room_code')
 
-    @property
-    def has_beacon(self):
-        return self.beacons.exists()
-
     def __str__(self):
         return '{}: {}'.format(self.building, self.room_code)
+
+    def had_beacon(self, date: datetime.date) -> bool:
+        """
+        :return: if there was at least one beacon in the Room on the date
+        """
+        return self.beacons.filter(date_added__lte=date).exists()
 
 
 class Class(models.Model):
@@ -221,6 +223,13 @@ class MeetingInstance(models.Model):
     def attended_by(self, student: Student):
         return AttendanceRecord.objects.filter(meeting_instance=self, student=student).exists()
 
+    @property
+    def had_beacon(self) -> bool:
+        """
+        :return: if there was at least one beacon in the room when the MeetingInstance took place
+        """
+        return self.room.had_beacon(self.date)
+
     def save(self, *args, **kwargs):
         self.full_clean()
         return super(MeetingInstance, self).save(*args, **kwargs)
@@ -246,7 +255,7 @@ class AttendanceRecord(models.Model):
                 self.student,
                 self.meeting_instance.meeting))
 
-    def attended_by(self, student: Student):
+    def attended_by(self, student: Student) -> bool:
         return AttendanceRecord.objects.filter(meeting_instance=self, student=student).exists()
 
     def save(self, *args, **kwargs):

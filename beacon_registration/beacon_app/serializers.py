@@ -152,7 +152,7 @@ class TimetableSerializer(serializers.Serializer):
     date = serializers.DateField(read_only=True)
     class_name = serializers.CharField(source='meeting.class_rel.class_code', read_only=True)
     attended = serializers.BooleanField(source='_attended', read_only=True)
-    room_has_beacon = serializers.BooleanField(source='room.has_beacon', read_only=True)
+    room_has_beacon = serializers.BooleanField(source='had_beacon', read_only=True)
     room_name = serializers.CharField(source='room.room_code', read_only=True)
     building_name = serializers.CharField(source='room.building', read_only=True)
     lecturer = serializers.CharField(read_only=True)
