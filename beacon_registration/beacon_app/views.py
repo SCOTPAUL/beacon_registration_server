@@ -290,7 +290,10 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
         except MeetingInstance.DoesNotExist:
             raise NotFound("The student is not in a class where this beacon is")
 
-        record = AttendanceRecord.objects.get_or_create(student=student, meeting_instance=meeting_instance)[0]
+        record, created = AttendanceRecord.objects.get_or_create(student=student, meeting_instance=meeting_instance)
+        if created:
+            record.time_attended = datetime.datetime.now().time()
+            record.save()
 
         return Response(AttendanceRecordSerializer(record, context={'request': request}).data,
                         status=status.HTTP_201_CREATED)

@@ -4,7 +4,6 @@ from .models import *
 
 admin.site.register(Beacon)
 admin.site.register(Student)
-admin.site.register(AttendanceRecord)
 
 
 class MeetingInstanceInline(admin.TabularInline):
@@ -56,3 +55,8 @@ class BuildingAdmin(admin.ModelAdmin):
 @admin.register(Lecturer)
 class LecturerAdmin(admin.ModelAdmin):
     inlines = [MeetingInstanceInline]
+
+
+@admin.register(AttendanceRecord)
+class AttendanceRecordAdmin(admin.ModelAdmin):
+    readonly_fields = ('time_attended',)

@@ -173,7 +173,7 @@ class TimetableSerializer(serializers.Serializer):
 class AttendanceRecordSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = AttendanceRecord
-        fields = ('meeting_instance',)
+        fields = ('meeting_instance', 'time_attended')
 
 
 class StreakField(serializers.Field):

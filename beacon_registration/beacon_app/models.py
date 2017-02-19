@@ -232,13 +232,15 @@ class AttendanceRecord(models.Model):
     """
     meeting_instance = models.ForeignKey('MeetingInstance', related_name='attendance_records')
     student = models.ForeignKey('Student', related_name='attendance_records')
+    time_attended = models.TimeField(editable=False, null=False, blank=False)
 
     class Meta:
         unique_together = ('meeting_instance', 'student')
 
     def __str__(self):
-        return "{} attended {}".format(self.student,
-                                       self.meeting_instance)
+        return "{} attended {} at {}".format(self.student,
+                                             self.meeting_instance,
+                                             self.time_attended)
 
     def clean(self):
         if self.student not in self.meeting_instance.meeting.students.all():
