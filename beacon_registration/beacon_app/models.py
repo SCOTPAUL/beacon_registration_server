@@ -241,7 +241,7 @@ class AttendanceRecord(models.Model):
     """
     meeting_instance = models.ForeignKey('MeetingInstance', related_name='attendance_records')
     student = models.ForeignKey('Student', related_name='attendance_records')
-    time_attended = models.TimeField(editable=False, null=False, blank=False)
+    time_attended = models.TimeField(editable=False, null=False, blank=False, auto_now_add=True)
 
     class Meta:
         unique_together = ('meeting_instance', 'student')
