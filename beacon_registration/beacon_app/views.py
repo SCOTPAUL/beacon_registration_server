@@ -11,8 +11,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from django.conf import settings
+from rest_framework.utils.serializer_helpers import ReturnDict
 
-from .auth import ExpiringTokenAuthentication
+from .auth import ExpiringTokenAuthentication, token_expired
 from .meetingbuilder import get_or_create_meetings
 from .permissions import IsUser, IsUserOrSharedWithUser
 from .serializers import *
@@ -47,7 +48,26 @@ class TokenViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.data
 
-        new_timetable_json = None
+        try:
+            student = Student.objects.get(user__username=data['username'])
+        except Student.DoesNotExist:
+            user = User.objects.create_user(username=data['username'])
+            student = Student.objects.create(user=user)
+
+        try:
+            token = Token.objects.get(user=student.user)
+            if token_expired(token):
+                token.delete()
+                token = self.make_token(data, student)
+
+        except Token.DoesNotExist:
+            token = self.make_token(data, student)
+
+        return Response({'token': token.key})
+
+    @staticmethod
+    def make_token(data: ReturnDict, student: Student) -> Token:
+        token = Token.objects.create(user=student.user)
 
         with requests.Session() as s:
             r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
@@ -64,25 +84,11 @@ class TokenViewSet(viewsets.ViewSet):
 
             new_timetable_json = r.json()
 
-        try:
-            student = Student.objects.get(user__username=data['username'])
-        except Student.DoesNotExist:
-            user = User.objects.create_user(username=data['username'])
-            student = Student.objects.create(user=user)
-
-        with transaction.atomic():
-            try:
-                token = Token.objects.get(user=student.user)
-                token.delete()
-            except Token.DoesNotExist:
-                pass
-
             if new_timetable_json is not None:
                 get_or_create_meetings(new_timetable_json, student)
 
-            token = Token.objects.create(user=student.user)
+        return token
 
-        return Response({'token': token.key})
 
 
 class ClassViewSet(viewsets.ReadOnlyModelViewSet):
