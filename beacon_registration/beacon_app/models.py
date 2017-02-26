@@ -19,6 +19,7 @@ class Student(models.Model):
     """
     user = models.OneToOneField(User, unique=True)
     shared_with = models.ManyToManyField('Student', related_name='shared_from', blank=True)
+    date_registered = models.DateField(editable=False, null=False, blank=False, auto_now_add=True)
 
     def __str__(self):
         return self.user.username
@@ -142,10 +143,11 @@ class Class(models.Model):
         time_now = datetime.datetime.now().time()
         meetings = student.meeting_set.filter(class_rel=self)
         instances = MeetingInstance.objects.filter(meeting__in=meetings)
-        contributing = instances.filter(
-            (Q(date__lt=today) | Q(date=today, meeting__time_start__gte=time_now)) & Q(room__beacons__isnull=False) &
-            Q(room__beacons__date_added__lte=F('date'))
-        )
+        contributing = instances.filter(Q(date__gte=student.date_registered) &
+                                        ((Q(date__lt=today) | Q(date=today, meeting__time_start__gte=time_now)) &
+                                         Q(room__beacons__isnull=False) &
+                                         Q(room__beacons__date_added__lte=F('date')))
+                                        )
 
         count = 0
         for instance in contributing:
@@ -291,8 +293,9 @@ def attendance_streaks(student: Student, class_: Union[None, Class] = None) -> L
         meetings = student.meeting_set.all()
 
     instances = MeetingInstance.objects.filter(meeting__in=meetings)
-    contributing = instances.filter(
-        (Q(date__lt=today) | Q(date=today, meeting__time_end__lte=time_now)) & Q(room__beacons__isnull=False))
+    contributing = instances.filter(Q(date__gte=student.date_registered) &
+                                    ((Q(date__lt=today) | Q(date=today, meeting__time_end__lte=time_now)) &
+                                     Q(room__beacons__isnull=False)))
     sorted_ = contributing.order_by('date')
 
     streaks = []
