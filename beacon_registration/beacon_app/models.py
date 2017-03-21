@@ -295,7 +295,8 @@ def attendance_streaks(student: Student, class_: Union[None, Class] = None) -> L
     instances = MeetingInstance.objects.filter(meeting__in=meetings)
     contributing = instances.filter(Q(date__gte=student.date_registered) &
                                     ((Q(date__lt=today) | Q(date=today, meeting__time_end__lte=time_now)) &
-                                     Q(room__beacons__isnull=False)))
+                                     Q(room__beacons__isnull=False) &
+                                     Q(room__beacons__date_added__lte=F('date'))))
     sorted_ = contributing.order_by('date')
 
     streaks = []

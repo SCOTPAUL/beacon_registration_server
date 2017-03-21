@@ -21,16 +21,19 @@ from .models import *
 
 
 class RoomViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = ()
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
 
 
 class BeaconViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = ()
     queryset = Beacon.objects.all()
     serializer_class = BeaconSerializer
 
 
 class BuildingViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = ()
     queryset = Building.objects.all()
     serializer_class = BuildingSerializer
 
@@ -90,13 +93,14 @@ class TokenViewSet(viewsets.ViewSet):
         return token
 
 
-
 class ClassViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = ()
     queryset = Class.objects.all()
     serializer_class = ClassSerializer
 
 
 class MeetingViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = ()
     queryset = Meeting.objects.all()
     serializer_class = MeetingSerializer
 
@@ -109,6 +113,9 @@ class MeetingInstanceViewSet(viewsets.ReadOnlyModelViewSet):
 
     @detail_route(methods=['get'], permission_classes=(IsAuthenticated,), url_path='friends-attended')
     def list_attended_friends(self, request, pk, format=None):
+        """
+        :return: list of student friend GUIDs who attended event
+        """
         shared_from = request.user.student.shared_from
         attended = shared_from.filter(attendance_records__meeting_instance__pk=pk)
 
@@ -206,7 +213,6 @@ class TimetableViewSet(viewsets.ViewSet):
         return viewable_students(request, 'timetable', format)
 
     def retrieve(self, request, username=None, format=None):
-        student = self.request.user.student
         timetable_username = username
         timetable_student = self.get_object(timetable_username)
         return Response(TimetableSerializer(self.get_meetings(timetable_student), many=True,
@@ -328,7 +334,7 @@ class StreakViewSet(viewsets.ViewSet):
 
 class SourceViewSet(viewsets.ViewSet):
     authentication_classes = ()
-    permission_classes = ()
+    permission_classes = (AllowAny,)
 
     def list(self, request, format=None):
         if settings.SOURCE_CODE_URL:
