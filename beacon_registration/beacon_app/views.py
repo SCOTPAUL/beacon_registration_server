@@ -58,10 +58,24 @@ class TokenViewSet(viewsets.ViewSet):
             student = Student.objects.create(user=user)
 
         try:
+            with requests.Session() as s:
+                r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
+                           data={'guid': data['username'], 'password': data['password']})
+
+                if not r.status_code == requests.codes.ok:
+                    raise AuthenticationFailed("Wrong username or password")
+
             token = Token.objects.get(user=student.user)
             if token_expired(token):
                 token.delete()
                 token = self.make_token(data, student)
+            else:
+                with requests.Session() as s:
+                    r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
+                               data={'guid': data['username'], 'password': data['password']})
+
+                    if not r.status_code == requests.codes.ok:
+                        raise AuthenticationFailed("Wrong username or password")
 
         except Token.DoesNotExist:
             token = self.make_token(data, student)

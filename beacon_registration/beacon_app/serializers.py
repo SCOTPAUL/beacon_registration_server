@@ -38,9 +38,6 @@ class StudentDeserializer(serializers.Serializer):
         if not len(value) > 0:
             raise serializers.ValidationError("Username cannot be empty")
 
-        if not (value[:-1].isdigit() and value[-1].isalpha()):
-            raise serializers.ValidationError("Username not in correct format")
-
         return value
 
 
