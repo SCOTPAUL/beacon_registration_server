@@ -18,11 +18,24 @@ class Student(models.Model):
     Representation of a student
     """
     user = models.OneToOneField(User, unique=True)
-    shared_with = models.ManyToManyField('Student', related_name='shared_from', blank=True)
     date_registered = models.DateField(editable=False, null=False, blank=False, auto_now_add=True)
 
     def __str__(self):
         return self.user.username
+
+    @property
+    def friendships(self) -> QuerySet:
+        """
+        :return: A QuerySet containing all of the accepted Friendships containing this user
+        """
+        return Friendship.objects.filter(Q(accepted=True) & (Q(receiving_student=self) | Q(initiating_student=self)))
+
+    @property
+    def friend_requests_for_me(self) -> QuerySet:
+        """
+        :return: A QuerySet containing all of the non-accepted Friendships with this user as the recipient
+        """
+        return Friendship.objects.filter(accepted=False, receiving_student=self)
 
     @property
     def classes(self) -> QuerySet:
@@ -80,6 +93,29 @@ class Lecturer(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Friendship(models.Model):
+    """
+    Representation of a friendship between two Students
+    """
+
+    initiating_student = models.ForeignKey(Student, null=False, blank=False, related_name='initiated_friendships')
+    receiving_student = models.ForeignKey(Student, null=False, blank=False, related_name='received_friendships')
+    accepted = models.BooleanField(default=False, null=False, blank=False)
+
+    def __str__(self):
+        return "Friendship from {} to {}, accepted={}".format(self.initiating_student,
+                                                              self.receiving_student,
+                                                              self.accepted)
+
+    def clean(self):
+        if self.initiating_student == self.receiving_student:
+            raise ValidationError("Cannot add self as a friend")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super(Friendship, self).save(*args, **kwargs)
 
 
 class Beacon(models.Model):

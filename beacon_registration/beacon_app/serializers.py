@@ -2,7 +2,7 @@ import dateutil.parser
 from rest_framework import serializers
 
 from .utils import Streak
-from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord
+from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord, Friendship
 
 
 class BuildingSerializer(serializers.HyperlinkedModelSerializer):
@@ -111,13 +111,13 @@ class StudentSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('username', 'classes')
 
 
-class FriendSerializer(serializers.ModelSerializer):
-    shared_with = serializers.StringRelatedField(many=True)
-    shared_from = serializers.StringRelatedField(many=True)
+class FriendshipSerializer(serializers.ModelSerializer):
+    from_user = serializers.StringRelatedField(source='initiating_student', read_only=True)
+    to_user = serializers.StringRelatedField(source='receiving_student', read_only=True)
 
     class Meta:
-        model = Student
-        fields = ('shared_with', 'shared_from')
+        model = Friendship
+        fields = ('from_user', 'to_user', 'accepted')
 
 
 class AllowedTimetableSerializer(serializers.ModelSerializer):

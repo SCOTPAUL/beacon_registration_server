@@ -3,7 +3,7 @@ from django.db import transaction
 from rest_framework import status
 from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import detail_route
+from rest_framework.decorators import detail_route, list_route
 from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,6 +13,7 @@ from rest_framework.reverse import reverse
 from django.conf import settings
 from rest_framework.utils.serializer_helpers import ReturnDict
 
+from beacon_app.exceptions import AlreadyExists
 from .auth import ExpiringTokenAuthentication, token_expired
 from .meetingbuilder import get_or_create_meetings
 from .permissions import IsUser, IsUserOrSharedWithUser
@@ -146,50 +147,75 @@ class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
 
 class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin):
     authentication_classes = (ExpiringTokenAuthentication,)
-    serializer_class = FriendSerializer
+    serializer_class = FriendshipSerializer
     permission_classes = (IsAuthenticated,)
     lookup_field = 'user__username'
 
     def list(self, request, *args, **kwargs):
         student = self.get_object()
 
-        return Response(FriendSerializer(student).data)
+        friends = []
+        friendships = student.friendships
+        for friendship in friendships:
+            if friendship.initiating_student == student:
+                friends.append(friendship.receiving_student.user.username)
+            else:
+                friends.append(friendship.initiating_student.user.username)
+
+        return Response(friends)
+
+    @list_route(methods=['get'], permission_classes=(IsAuthenticated,), url_path='friendship-statuses-involving-me')
+    def list_friendships_involving_me(self, *args, **kwargs):
+        student = self.get_object()
+
+        return Response(FriendshipSerializer(Friendship.objects.filter(
+            Q(initiating_student=student) | Q(receiving_student=student)), many=True).data)
 
     def create(self, request, *args, **kwargs):
         student = self.get_object()
 
         serializer = FriendDeserializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        new_share_username = serializer.validated_data
+        new_friend_username = serializer.validated_data
+        new_friend = Student.objects.get(user__username=new_friend_username['username'])
 
-        share_student = Student.objects.get(user__username=new_share_username['username'])
-
-        if share_student == student:
+        if new_friend == student:
             raise ParseError(detail="Can't add self as a friend")
 
-        student.shared_with.add(share_student)
-        student.save()
+        if Friendship.objects.filter(initiating_student=student, receiving_student=new_friend).exists():
+            raise AlreadyExists(detail="You have already sent a friend request to this user")
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            friendship = Friendship.objects.get(receiving_student=student, initiating_student=new_friend)
+            friendship.accepted = True
+            friendship.save()
+            return Response(FriendshipSerializer(friendship).data, status=status.HTTP_200_OK)
+        except Friendship.DoesNotExist:
+            friendship = Friendship.objects.create(initiating_student=student, receiving_student=new_friend)
+            return Response(FriendshipSerializer(friendship).data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
         student = self.get_object()
 
-        remove_share_username = kwargs['user__username']
+        removed_friend_username = kwargs['user__username']
 
         try:
-            share_student = Student.objects.get(user__username=remove_share_username)
+            friend_to_remove = Student.objects.get(user__username=removed_friend_username)
         except Student.DoesNotExist:
             raise NotFound(detail="Can't remove, no such friend")
 
-        if share_student == student:
+        if friend_to_remove == student:
             raise ParseError(detail="Can't remove self")
 
-        if not student.shared_with.filter(user__username=share_student.user.username).exists():
-            raise NotFound(detail="Can't remove, no such friend")
+        try:
+            friendship = Friendship.objects.get(initiating_student=student, receiving_student=friend_to_remove)
+        except Friendship.DoesNotExist:
+            try:
+                friendship = Friendship.objects.get(receiving_student=student, initiating_student=friend_to_remove)
+            except Friendship.DoesNotExist:
+                raise NotFound(detail="Can't remove, no such friend")
 
-        student.shared_with.remove(share_student)
-        student.save()
+        friendship.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
