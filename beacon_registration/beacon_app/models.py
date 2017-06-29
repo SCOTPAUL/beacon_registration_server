@@ -24,6 +24,16 @@ class Student(models.Model):
         return self.user.username
 
     @property
+    def friends(self) -> QuerySet:
+        """
+        :return: QuerySet of friends for this student
+        """
+        return Student.objects.filter(Q(initiated_friendships__accepted=True,
+                                        initiated_friendships__receiving_student=self) |
+                                      Q(received_friendships__accepted=True,
+                                        received_friendships__initiating_student=self)).exclude(pk=self.pk).distinct()
+
+    @property
     def friendships(self) -> QuerySet:
         """
         :return: A QuerySet containing all of the accepted Friendships containing this user

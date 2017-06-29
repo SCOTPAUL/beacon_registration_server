@@ -20,5 +20,5 @@ class IsUserOrSharedWithUser(permissions.BasePermission):
         authed_student = request.user.student
         requested_student = obj
 
-        return authed_student == requested_student or authed_student.shared_from.filter(
+        return authed_student == requested_student or authed_student.friends.filter(
             pk=requested_student.pk).exists()

@@ -131,8 +131,8 @@ class MeetingInstanceViewSet(viewsets.ReadOnlyModelViewSet):
         """
         :return: list of student friend GUIDs who attended event
         """
-        shared_from = request.user.student.shared_from
-        attended = shared_from.filter(attendance_records__meeting_instance__pk=pk)
+        friends = request.user.student.friends
+        attended = friends.filter(attendance_records__meeting_instance__pk=pk)
 
         return Response([str(student) for student in attended])
 
@@ -153,16 +153,7 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
 
     def list(self, request, *args, **kwargs):
         student = self.get_object()
-
-        friends = []
-        friendships = student.friendships
-        for friendship in friendships:
-            if friendship.initiating_student == student:
-                friends.append(friendship.receiving_student.user.username)
-            else:
-                friends.append(friendship.initiating_student.user.username)
-
-        return Response(friends)
+        return Response([str(friend) for friend in student.friends])
 
     @list_route(methods=['get'], permission_classes=(IsAuthenticated,), url_path='friendship-statuses-involving-me')
     def list_friendships_involving_me(self, *args, **kwargs):

@@ -124,7 +124,7 @@ class AllowedTimetableSerializer(serializers.ModelSerializer):
     me = serializers.HyperlinkedRelatedField(view_name='timetable-detail', read_only=True,
                                              lookup_field='username', source='user')
     shared_with_me = serializers.HyperlinkedRelatedField(view_name='timetable-detail', many=True, read_only=True,
-                                                         source='shared_from', lookup_field='username')
+                                                         source='friends', lookup_field='username')
 
     def __init__(self, *args, **kwargs):
         base_view = kwargs.pop('base_view')
