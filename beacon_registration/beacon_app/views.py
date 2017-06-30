@@ -1,9 +1,10 @@
 import requests
 from django.db import transaction
+from requests import Session
 from rest_framework import status
 from rest_framework import viewsets, mixins
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import detail_route, list_route
+from rest_framework.decorators import detail_route, list_route, api_view, permission_classes
 from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -16,7 +17,7 @@ from rest_framework.utils.serializer_helpers import ReturnDict
 from beacon_app.exceptions import AlreadyExists
 from .auth import ExpiringTokenAuthentication, token_expired
 from .meetingbuilder import get_or_create_meetings
-from .permissions import IsUser, IsUserOrSharedWithUser
+from .permissions import IsUser, IsUserOrSharedWithUser, IsAuthenticatedOrCreating
 from .serializers import *
 from .models import *
 
@@ -39,6 +40,59 @@ class BuildingViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = BuildingSerializer
 
 
+class AccountsViewSet(viewsets.ViewSet):
+    """
+    Contains the views for accounts
+    """
+    permission_classes = (IsAuthenticatedOrCreating,)
+    authentication_classes = (ExpiringTokenAuthentication,)
+
+    def create(self, request, *args, **kwargs):
+        serializer = NewAccountDeserializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_account_details = serializer.data
+
+        with requests.Session() as s:
+            r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
+                       data={'guid': new_account_details['username'], 'password': new_account_details['password']})
+
+            if not r.status_code == requests.codes.ok:
+                raise AuthenticationFailed("Wrong username or password")
+            else:
+                user = User.objects.create(username=new_account_details['username'])
+                student = Student.objects.create(user=user, nickname=new_account_details['nickname'])
+
+                try:
+                    token = Token.objects.get(user=student.user)
+                    if token_expired(token):
+                        token.delete()
+                        token = make_token(new_account_details, student, session=s)
+
+                except Token.DoesNotExist:
+                    token = make_token(new_account_details, student, session=s)
+
+                return Response({'token': token.key})
+
+    @list_route(methods=['POST'], url_path='change-nickname')
+    def change_nickname(self, request, *args, **kwargs):
+        student = self.get_object()
+        if request.data.get('nickname', None) == student.nickname:
+            return Response(SimpleStudentSerializer(student).data, status=status.HTTP_200_OK)
+
+        serializer = NicknameChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_nickname = serializer.data['nickname']
+        student.nickname = new_nickname
+        student.save()
+
+        return Response(SimpleStudentSerializer(student).data, status=status.HTTP_200_OK)
+
+    def get_object(self):
+        return self.request.user.student
+
+
+
 class TokenViewSet(viewsets.ViewSet):
     """
     Contains the views for exchanging username and password information for a temporary access token
@@ -55,21 +109,13 @@ class TokenViewSet(viewsets.ViewSet):
         try:
             student = Student.objects.get(user__username=data['username'])
         except Student.DoesNotExist:
-            user = User.objects.create_user(username=data['username'])
-            student = Student.objects.create(user=user)
+            raise NotFound("No such student exists")
 
         try:
-            with requests.Session() as s:
-                r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
-                           data={'guid': data['username'], 'password': data['password']})
-
-                if not r.status_code == requests.codes.ok:
-                    raise AuthenticationFailed("Wrong username or password")
-
             token = Token.objects.get(user=student.user)
             if token_expired(token):
                 token.delete()
-                token = self.make_token(data, student)
+                token = make_token(data, student)
             else:
                 with requests.Session() as s:
                     r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
@@ -79,33 +125,40 @@ class TokenViewSet(viewsets.ViewSet):
                         raise AuthenticationFailed("Wrong username or password")
 
         except Token.DoesNotExist:
-            token = self.make_token(data, student)
+            token = make_token(data, student)
 
         return Response({'token': token.key})
 
-    @staticmethod
-    def make_token(data: ReturnDict, student: Student) -> Token:
-        token = Token.objects.create(user=student.user)
 
-        with requests.Session() as s:
-            r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
-                       data={'guid': data['username'], 'password': data['password']})
+def do_sync(session: Session, student: Student):
+    next_year = datetime.datetime.utcnow() + datetime.timedelta(days=365)
+    next_year_timestamp = calendar.timegm(next_year.utctimetuple())
+
+    r = session.get("https://frontdoor.spa.gla.ac.uk/spacett/timetable/events.m",
+                    params={'start': 0, 'end': next_year_timestamp})
+
+    new_timetable_json = r.json()
+
+    if new_timetable_json is not None:
+        get_or_create_meetings(new_timetable_json, student)
+
+
+def make_token(data: ReturnDict, student: Student, session: Session=None) -> Token:
+    token = Token.objects.create(user=student.user)
+
+    if session:
+        do_sync(session, student)
+    else:
+        with requests.Session() as session:
+            r = session.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
+                             data={'guid': data['username'], 'password': data['password']})
 
             if not r.status_code == requests.codes.ok:
                 raise AuthenticationFailed("Wrong username or password")
 
-            next_year = datetime.datetime.utcnow() + datetime.timedelta(days=365)
-            next_year_timestamp = calendar.timegm(next_year.utctimetuple())
+            do_sync(session, student)
 
-            r = s.get("https://frontdoor.spa.gla.ac.uk/spacett/timetable/events.m",
-                      params={'start': 0, 'end': next_year_timestamp})
-
-            new_timetable_json = r.json()
-
-            if new_timetable_json is not None:
-                get_or_create_meetings(new_timetable_json, student)
-
-        return token
+    return token
 
 
 class ClassViewSet(viewsets.ReadOnlyModelViewSet):
@@ -129,12 +182,12 @@ class MeetingInstanceViewSet(viewsets.ReadOnlyModelViewSet):
     @detail_route(methods=['get'], permission_classes=(IsAuthenticated,), url_path='friends-attended')
     def list_attended_friends(self, request, pk, format=None):
         """
-        :return: list of student friend GUIDs who attended event
+        :return: list of student friend GUIDs and nicknames who attended event
         """
         friends = request.user.student.friends
         attended = friends.filter(attendance_records__meeting_instance__pk=pk)
 
-        return Response([str(student) for student in attended])
+        return Response([{'username': str(student), 'nickname': student.nickname} for student in attended])
 
 
 class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
@@ -153,7 +206,8 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
 
     def list(self, request, *args, **kwargs):
         student = self.get_object()
-        return Response([str(friend) for friend in student.friends])
+
+        return Response(SimpleStudentSerializer(student.friends, many=True).data)
 
     @list_route(methods=['get'], permission_classes=(IsAuthenticated,), url_path='friendship-statuses-involving-me')
     def list_friendships_involving_me(self, *args, **kwargs):

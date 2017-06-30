@@ -3,6 +3,7 @@ from .views import *
 
 router = DefaultRouter()
 router.register(r'rooms', RoomViewSet)
+router.register(r'accounts', AccountsViewSet, base_name='account')
 router.register(r'buildings', BuildingViewSet)
 router.register(r'beacons', BeaconViewSet)
 router.register(r'tokens', TokenViewSet)

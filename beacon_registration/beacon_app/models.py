@@ -19,6 +19,7 @@ class Student(models.Model):
     """
     user = models.OneToOneField(User, unique=True)
     date_registered = models.DateField(editable=False, null=False, blank=False, auto_now_add=True)
+    nickname = models.CharField(null=False, blank=False, unique=True, max_length=20)
 
     def __str__(self):
         return self.user.username

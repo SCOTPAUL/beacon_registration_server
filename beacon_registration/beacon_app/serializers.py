@@ -1,5 +1,7 @@
 import dateutil.parser
+from django.contrib.auth.models import User
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from .utils import Streak
 from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord, Friendship
@@ -28,17 +30,20 @@ class BeaconDeserializer(serializers.Serializer):
     major = serializers.IntegerField(required=True)
     minor = serializers.IntegerField(required=True)
 
+class NicknameChangeSerializer(serializers.Serializer):
+    nickname = serializers.CharField(max_length=20, required=True,
+                                     validators=[UniqueValidator(queryset=Student.objects.all())])
+
+class NewAccountDeserializer(serializers.Serializer):
+    nickname = serializers.CharField(max_length=20, required=True,
+                                     validators=[UniqueValidator(queryset=Student.objects.all())])
+    username = serializers.CharField(max_length=140, required=True,
+                                     validators=[UniqueValidator(queryset=User.objects.all())])
+    password = serializers.CharField(required=True)
 
 class StudentDeserializer(serializers.Serializer):
     username = serializers.CharField(max_length=140, required=True)
     password = serializers.CharField(required=True)
-
-    @staticmethod
-    def validate_username(value: str) -> str:
-        if not len(value) > 0:
-            raise serializers.ValidationError("Username cannot be empty")
-
-        return value
 
 
 class FriendDeserializer(serializers.Serializer):
@@ -102,13 +107,21 @@ class ClassSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('class_code', 'meetings')
 
 
+class SimpleStudentSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username')
+
+    class Meta:
+        model = Student
+        fields = ('username', 'nickname')
+
+
 class StudentSerializer(serializers.HyperlinkedModelSerializer):
     username = serializers.CharField(source='user.username')
     classes = serializers.HyperlinkedRelatedField(view_name='class-detail', many=True, read_only=True)
 
     class Meta:
         model = Student
-        fields = ('username', 'classes')
+        fields = ('username', 'nickname', 'classes')
 
 
 class FriendshipSerializer(serializers.ModelSerializer):
