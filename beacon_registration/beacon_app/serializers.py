@@ -126,11 +126,13 @@ class StudentSerializer(serializers.HyperlinkedModelSerializer):
 
 class FriendshipSerializer(serializers.ModelSerializer):
     from_user = serializers.StringRelatedField(source='initiating_student', read_only=True)
+    from_user_nickname = serializers.StringRelatedField(source='initiating_student.nickname', read_only=True)
     to_user = serializers.StringRelatedField(source='receiving_student', read_only=True)
+    to_user_nickname = serializers.StringRelatedField(source='receiving_student.nickname', read_only=True)
 
     class Meta:
         model = Friendship
-        fields = ('from_user', 'to_user', 'accepted')
+        fields = ('from_user', 'from_user_nickname', 'to_user', 'to_user_nickname', 'accepted')
 
 
 class AllowedTimetableSerializer(serializers.ModelSerializer):

@@ -48,6 +48,10 @@ class AccountsViewSet(viewsets.ViewSet):
     authentication_classes = (ExpiringTokenAuthentication,)
 
     def create(self, request, *args, **kwargs):
+        username = request.data.get('username', None)
+        if username and Student.objects.filter(user__username=username).exists():
+            raise AlreadyExists(detail="Account with this username already exists")
+
         serializer = NewAccountDeserializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         new_account_details = serializer.data
@@ -90,7 +94,6 @@ class AccountsViewSet(viewsets.ViewSet):
 
     def get_object(self):
         return self.request.user.student
-
 
 
 class TokenViewSet(viewsets.ViewSet):
@@ -187,7 +190,7 @@ class MeetingInstanceViewSet(viewsets.ReadOnlyModelViewSet):
         friends = request.user.student.friends
         attended = friends.filter(attendance_records__meeting_instance__pk=pk)
 
-        return Response([{'username': str(student), 'nickname': student.nickname} for student in attended])
+        return Response(SimpleStudentSerializer(attended, many=True).data)
 
 
 class StudentViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
