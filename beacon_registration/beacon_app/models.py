@@ -331,3 +331,44 @@ def attendance_streaks(student: Student, class_: Union[None, Class] = None) -> L
             streaks.append(Streak(streak_start.date, last_date_of_year))
 
     return streaks
+
+
+class LogEntry(models.Model):
+    UNKNOWN = 'unknown'
+    VIEW = 'view'
+    API = 'api'
+    ERROR = 'error'
+    BEACON = 'beacon'
+    COMMS = 'comms'
+    LOOKUP = 'lookup'
+    APP = 'app'
+    DEVICE = 'device'
+    TRACKING = 'tracking'
+    SERVER = 'server'
+
+    EVENT_TYPE_CHOICES = (
+        (UNKNOWN, UNKNOWN),
+        (VIEW, VIEW),
+        (API, API),
+        (ERROR, ERROR),
+        (BEACON, BEACON),
+        (COMMS, COMMS),
+        (LOOKUP, LOOKUP),
+        (APP, APP),
+        (DEVICE, DEVICE),
+        (TRACKING, TRACKING),
+        (SERVER, SERVER)
+    )
+
+    event_type = models.CharField(max_length=10, choices=EVENT_TYPE_CHOICES, default=UNKNOWN, blank=False, null=False,
+                                  editable=False)
+    event_text = models.TextField(blank=False, null=False, editable=False)
+    timestamp = models.DateTimeField(blank=False, null=False, editable=False)
+    server_timestamp = models.DateTimeField(blank=False, null=False, auto_now_add=True, editable=False)
+    student = models.ForeignKey(Student, null=True, blank=True, related_name='log_entries')
+
+    def __str__(self):
+        return "Student: {}, event_type: {}, timestamp: {}".format(self.student, self.event_type, self.timestamp)
+
+    class Meta:
+        verbose_name_plural = 'Log Entries'

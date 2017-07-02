@@ -60,3 +60,9 @@ class LecturerAdmin(admin.ModelAdmin):
 @admin.register(AttendanceRecord)
 class AttendanceRecordAdmin(admin.ModelAdmin):
     readonly_fields = ('time_attended',)
+
+
+@admin.register(LogEntry)
+class LogEntryAdmin(admin.ModelAdmin):
+    readonly_fields = ('event_type', 'event_text', 'timestamp', 'server_timestamp', 'student')
+
