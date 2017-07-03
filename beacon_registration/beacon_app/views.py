@@ -326,8 +326,34 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
             record = AttendanceRecord.objects.create(student=student, meeting_instance=meeting_instance,
                                                      time_attended=data['seen_at_time'])
 
-        return Response(AttendanceRecordSerializer(record, context={'request': request}).data,
+        return Response(AttendanceRecordSerializer(record).data,
                         status=status.HTTP_201_CREATED)
+
+    @detail_route(methods=['POST'], url_path='force-creation')
+    def force_record_creation(self, request, format=None, pk=None):
+        student = self.request.user.student
+
+        if pk is None:
+            raise ParseError("No meeting instance pk included with request")
+
+        try:
+            meeting_instance = MeetingInstance.objects.get(pk=pk)
+            if AttendanceRecord.objects.filter(student=student,
+                                               meeting_instance=meeting_instance).exists():
+                # TODO: Replace with AlreadyExists
+                return Response("You have already attended this meeting instance", status=status.HTTP_409_CONFLICT)
+            else:
+                attended_at = datetime.datetime.combine(meeting_instance.date, meeting_instance.meeting.time_start)
+
+                record = AttendanceRecord.objects.create(student=student, meeting_instance=meeting_instance,
+                                                         time_attended=attended_at,
+                                                         manually_created=True)
+
+                return Response(AttendanceRecordSerializer(record).data,
+                                status=status.HTTP_201_CREATED)
+
+        except MeetingInstance.DoesNotExist:
+            raise NotFound("No such meeting instance exists")
 
 
 class StreakViewSet(viewsets.ViewSet):

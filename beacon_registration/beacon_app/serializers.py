@@ -168,7 +168,7 @@ class TimetableSerializer(serializers.Serializer):
         return AttendanceRecord.objects.filter(student=student, meeting_instance=obj).exists()
 
 
-class AttendanceRecordSerializer(serializers.HyperlinkedModelSerializer):
+class AttendanceRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = AttendanceRecord
         fields = ('meeting_instance', 'time_attended')
