@@ -2,7 +2,7 @@ import dateutil.parser
 from rest_framework import serializers
 
 from .utils import Streak
-from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord, LogEntry
+from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord
 
 
 class BuildingSerializer(serializers.HyperlinkedModelSerializer):
@@ -227,10 +227,3 @@ class StreaksSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = ('overall', 'class_streaks')
-
-
-class LogEntryDeserializer(serializers.Serializer):
-    event_type = serializers.ChoiceField(choices=LogEntry.EVENT_TYPE_CHOICES, required=True)
-    event_text = serializers.CharField(required=True)
-    timestamp = serializers.DateTimeField(required=True)
-
