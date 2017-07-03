@@ -296,7 +296,7 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
     def create(self, request, format=None):
         student = self.request.user.student
 
-        serializer = BeaconDeserializer(data=request.data)
+        serializer = BeaconSightingDeserializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
@@ -307,19 +307,24 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
             raise NotFound("No such beacon exists")
 
         try:
-            current_time = datetime.datetime.now().time()
-            current_date = datetime.date.today()
-            meeting_instance = MeetingInstance.objects.get(room=beacon.room, date=current_date,
-                                                           meeting__time_start__lte=current_time,
-                                                           meeting__time_end__gte=current_time,
+            seen_at_date = data['seen_at_time'].date()
+            seen_at_time = data['seen_at_time'].time()
+
+            meeting_instance = MeetingInstance.objects.get(room=beacon.room,
+                                                           date=seen_at_date,
+                                                           meeting__time_start__lte=seen_at_time,
+                                                           meeting__time_end__gte=seen_at_time,
                                                            meeting__students=student)
         except MeetingInstance.DoesNotExist:
             raise NotFound("The student is not in a class where this beacon is")
 
-        record, created = AttendanceRecord.objects.get_or_create(student=student, meeting_instance=meeting_instance)
-        if created:
-            record.time_attended = datetime.datetime.now().time()
-            record.save()
+        try:
+            AttendanceRecord.objects.get(student=student, meeting_instance=meeting_instance)
+            # TODO: Replace with AlreadyExists
+            return Response("This attendance record already exists", status=status.HTTP_409_CONFLICT)
+        except AttendanceRecord.DoesNotExist:
+            record = AttendanceRecord.objects.create(student=student, meeting_instance=meeting_instance,
+                                                     time_attended=data['seen_at_time'])
 
         return Response(AttendanceRecordSerializer(record, context={'request': request}).data,
                         status=status.HTTP_201_CREATED)

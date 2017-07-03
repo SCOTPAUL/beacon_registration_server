@@ -23,10 +23,11 @@ class BeaconSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('uuid', 'major', 'minor', 'room')
 
 
-class BeaconDeserializer(serializers.Serializer):
+class BeaconSightingDeserializer(serializers.Serializer):
     uuid = serializers.UUIDField(required=True)
     major = serializers.IntegerField(required=True)
     minor = serializers.IntegerField(required=True)
+    seen_at_time = serializers.DateTimeField(required=True)
 
 
 class StudentDeserializer(serializers.Serializer):
