@@ -293,6 +293,45 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
     authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
+    @list_route(methods=['POST'], url_path='add-multiple')
+    def create_multiple(self, request, format=None):
+        student = self.request.user.student
+        
+        serializer = BeaconSightingDeserializer(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
+
+        beacon_sightings = serializer.data
+        new_attendance_records = []
+
+        for sighting in beacon_sightings:
+            try:
+                beacon = Beacon.objects.get(uuid=data['uuid'], major=data['major'], minor=data['minor'])
+            except Beacon.DoesNotExist:
+                continue
+
+            try:
+                seen_at_date = sighting['seen_at_time'].date()
+                seen_at_time = sighting['seen_at_time'].time()
+
+                meeting_instance = MeetingInstance.objects.get(room=beacon.room,
+                                                           date=seen_at_date,
+                                                           meeting__time_start__lte=seen_at_time,
+                                                           meeting__time_end__gte=seen_at_time,
+                                                           meeting__students=student)
+            except MeetingInstance.DoesNotExist:
+                continue
+
+
+            try:
+                AttendanceRecord.get(student=student, meeting_instance=meeting_instance)
+            except AttendanceRecord.DoesNotExist:
+                record = AttendanceRecord.objects.create(student=student, meeting_instance=meeting_instance,
+                                                     time_attended=data['seen_at_time'])
+
+                new_attendance_records.append(record)
+
+        return Response(AttendanceRecordSerializer(new_attendance_records, many=True).data)
+
     def create(self, request, format=None):
         student = self.request.user.student
 
