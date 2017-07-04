@@ -305,7 +305,7 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
 
         for sighting in beacon_sightings:
             try:
-                beacon = Beacon.objects.get(uuid=data['uuid'], major=data['major'], minor=data['minor'])
+                beacon = Beacon.objects.get(uuid=sighting['uuid'], major=sighting['major'], minor=sighting['minor'])
             except Beacon.DoesNotExist:
                 continue
 
@@ -314,19 +314,18 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
                 seen_at_time = sighting['seen_at_time'].time()
 
                 meeting_instance = MeetingInstance.objects.get(room=beacon.room,
-                                                           date=seen_at_date,
-                                                           meeting__time_start__lte=seen_at_time,
-                                                           meeting__time_end__gte=seen_at_time,
-                                                           meeting__students=student)
+                                                               date=seen_at_date,
+                                                               meeting__time_start__lte=seen_at_time,
+                                                               meeting__time_end__gte=seen_at_time,
+                                                               meeting__students=student)
             except MeetingInstance.DoesNotExist:
                 continue
 
-
             try:
-                AttendanceRecord.get(student=student, meeting_instance=meeting_instance)
+                AttendanceRecord.objects.get(student=student, meeting_instance=meeting_instance)
             except AttendanceRecord.DoesNotExist:
                 record = AttendanceRecord.objects.create(student=student, meeting_instance=meeting_instance,
-                                                     time_attended=data['seen_at_time'])
+                                                         time_attended=sighting['seen_at_time'])
 
                 new_attendance_records.append(record)
 
