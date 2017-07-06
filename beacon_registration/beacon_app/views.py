@@ -212,7 +212,40 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
 
         return Response(SimpleStudentSerializer(student.friends, many=True).data)
 
-    @list_route(methods=['get'], permission_classes=(IsAuthenticated,), url_path='friendship-statuses-involving-me')
+    @detail_route(methods=['GET'], url_path='current-location')
+    def current_location(self, request, *args, **kwargs):
+        user__username = kwargs['user__username']
+        try:
+            friend = Student.objects.get(user__username=user__username)
+        except Student.DoesNotExist:
+            raise NotFound("No such friend {}".format(user__username))
+
+        if not IsUserOrSharedWithUser().has_object_permission(request, self, friend):
+            raise NotFound("No such friend {}".format(user__username))
+
+        data = Student.objects.get(user__username=user__username).location
+
+        if data['meeting_instance'] is None:
+            data.pop('meeting_instance')
+        else:
+            meeting_inst = data['meeting_instance']
+            data['time_start'] = meeting_inst.meeting.time_start
+            data['time_end'] = meeting_inst.time_end
+            data['room'] = meeting_inst.meeting.room.name
+            data['building'] = meeting_inst.meeting.room.building.name
+
+        serializer = LocationSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        return Response(serializer.data)
+
+    @list_route(methods=['GET'], url_path='location-statuses')
+    def location_statuses(self, *args, **kwargs):
+        student = self.get_object()
+        serializer = LocationStatusSerializer(student.friends, many=True)
+        return Response(serializer.data)
+
+    @list_route(methods=['GET'], permission_classes=(IsAuthenticated,), url_path='friendship-statuses-involving-me')
     def list_friendships_involving_me(self, *args, **kwargs):
         student = self.get_object()
 

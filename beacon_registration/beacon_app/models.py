@@ -1,5 +1,6 @@
 import calendar
 import datetime
+from enum import Enum
 from typing import Dict, List, Union
 
 from django.contrib.auth.models import User
@@ -11,6 +12,33 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from beacon_app.utils import Streak
+
+
+class LocationStatus(Enum):
+    """
+    Indicates current student location status
+    """
+
+    """
+    The student does not currently have a class scheduled
+    """
+    NO_CLASS = "no_class"
+
+    """
+    The student has a class scheduled for now, and has been marked as attended for that class
+    """
+    IN_CLASS = "in_class"
+
+    """
+    The student has a class scheduled for now, but hasn't yet been marked attended. The Room may have no beacons in it.
+    """
+    NOT_SEEN_IN_CLASS = "not_seen_in_class"
+
+
+class Location:
+    def __init__(self, meeting_instance: 'MeetingInstance', location_status: LocationStatus):
+        self.meeting_instance = meeting_instance
+        self.location_status = location_status
 
 
 class Student(models.Model):
@@ -33,6 +61,58 @@ class Student(models.Model):
                                         initiated_friendships__receiving_student=self) |
                                       Q(received_friendships__accepted=True,
                                         received_friendships__initiating_student=self)).exclude(pk=self.pk).distinct()
+
+    @property
+    def location(self) -> Dict:
+        location_dict = {'meeting_instance': None, 'location_status': None}
+
+        current_datetime = datetime.datetime.now()
+        classes_on_now = MeetingInstance.objects.filter(
+            meeting=self.meeting_set.filter(
+                time_start__lte=current_datetime.time(),
+                time_end__gte=current_datetime.time()),
+            date=current_datetime.date()
+        )
+
+        if not classes_on_now.exists():
+            location_dict['location_status'] = LocationStatus.NO_CLASS.value
+            return location_dict
+        else:
+            student_attendances = AttendanceRecord.objects.filter(student=self)
+
+            for meeting_instance in classes_on_now:
+                if student_attendances.filter(meeting_instance=meeting_instance).exists():
+                    location_dict['meeting_instance'] = meeting_instance
+                    location_dict['location_status'] = LocationStatus.IN_CLASS.value
+                    return location_dict
+
+            location_dict['meeting_instance'] = classes_on_now[-1]
+            location_dict['location_status'] = LocationStatus.NO_CLASS.value
+            return location_dict
+
+    @property
+    def location_status(self) -> LocationStatus:
+        """
+        :return: a location status for the student at the current time
+        """
+        current_datetime = datetime.datetime.now()
+        classes_on_now = MeetingInstance.objects.filter(
+            meeting=self.meeting_set.filter(
+                time_start__lte=current_datetime.time(),
+                time_end__gte=current_datetime.time()),
+            date=current_datetime.date()
+        )
+
+        if not classes_on_now.exists():
+            return LocationStatus.NO_CLASS
+        else:
+            student_attendances = AttendanceRecord.objects.filter(student=self)
+
+            for meeting_instance in classes_on_now:
+                if student_attendances.filter(meeting_instance=meeting_instance).exists():
+                    return LocationStatus.IN_CLASS
+
+            return LocationStatus.NOT_SEEN_IN_CLASS
 
     @property
     def friendships(self) -> QuerySet:

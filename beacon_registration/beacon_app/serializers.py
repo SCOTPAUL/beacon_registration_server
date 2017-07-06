@@ -124,6 +124,23 @@ class StudentSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('username', 'nickname', 'classes')
 
 
+class LocationStatusSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    location_status = serializers.CharField(source='location_status.value', read_only=True)
+
+    class Meta:
+        model = Student
+        fields = ('username', 'location_status')
+
+
+class LocationSerializer(serializers.Serializer):
+    location_status = serializers.CharField(required=True)
+    time_start = serializers.TimeField(required=False)
+    time_end = serializers.TimeField(required=False)
+    room = serializers.CharField(required=False)
+    building = serializers.CharField(required=False)
+
+
 class FriendshipSerializer(serializers.ModelSerializer):
     from_user = serializers.StringRelatedField(source='initiating_student', read_only=True)
     from_user_nickname = serializers.StringRelatedField(source='initiating_student.nickname', read_only=True)
