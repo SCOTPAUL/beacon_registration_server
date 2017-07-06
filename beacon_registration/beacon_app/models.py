@@ -223,7 +223,7 @@ class Meeting(models.Model):
         enumerate(list(calendar.day_name))
     )
 
-    students = models.ManyToManyField('Student')
+    students = models.ManyToManyField('Student', db_index=True)
     time_start = models.TimeField()
     time_end = models.TimeField()
     day_of_week = models.IntegerField(choices=WEEKDAY_CHOICES, null=False, blank=False)
@@ -253,7 +253,7 @@ class MeetingInstance(models.Model):
     Meeting, but that meeting will have many MeetingInstances, each of which have a different Room.
     """
     date = models.DateField()
-    meeting = models.ForeignKey('Meeting', related_name='instances')
+    meeting = models.ForeignKey('Meeting', related_name='instances', db_index=True)
     room = models.ForeignKey('Room', related_name='meeting_instances')
     lecturer = models.ForeignKey('Lecturer', related_name='meeting_instances', null=True, blank=True)
 
@@ -288,8 +288,8 @@ class AttendanceRecord(models.Model):
     """
     A relation between a MeetingInstance and a Student, which marks that they attended that particular MeetingInstance
     """
-    meeting_instance = models.ForeignKey('MeetingInstance', related_name='attendance_records')
-    student = models.ForeignKey('Student', related_name='attendance_records')
+    meeting_instance = models.ForeignKey('MeetingInstance', related_name='attendance_records', db_index=True)
+    student = models.ForeignKey('Student', related_name='attendance_records', db_index=True)
     time_attended = models.TimeField(editable=False, null=False, blank=False, auto_now_add=True)
 
     class Meta:

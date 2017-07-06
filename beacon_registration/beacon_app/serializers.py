@@ -174,12 +174,11 @@ class TimetableSerializer(serializers.Serializer):
         # Instantiate the superclass normally
         super(TimetableSerializer, self).__init__(*args, **kwargs)
 
-        for meeting_instance in self.instance:
-            meeting_instance._attended = self.did_attend(meeting_instance)
+        attended_meetings = AttendanceRecord.objects.filter(student=self.context['student'])
+        attended_meeting_ids = attended_meetings.values_list('id')
 
-    def did_attend(self, obj):
-        student = self.context['student']
-        return AttendanceRecord.objects.filter(student=student, meeting_instance=obj).exists()
+        for meeting_instance in self.instance:
+            meeting_instance._attended = meeting_instance.id in attended_meeting_ids
 
 
 class AttendanceRecordSerializer(serializers.HyperlinkedModelSerializer):
