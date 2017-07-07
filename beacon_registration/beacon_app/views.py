@@ -15,6 +15,8 @@ from django.conf import settings
 from rest_framework.utils.serializer_helpers import ReturnDict
 
 from beacon_app.exceptions import AlreadyExists
+
+from .crypto import PasswordCrypto
 from .auth import ExpiringTokenAuthentication, token_expired
 from .meetingbuilder import get_or_create_meetings
 from .permissions import IsUser, IsUserOrSharedWithUser, IsAuthenticatedOrCreating
@@ -63,7 +65,7 @@ class AccountsViewSet(viewsets.ViewSet):
             if not r.status_code == requests.codes.ok:
                 raise AuthenticationFailed("Wrong username or password")
             else:
-                user = User.objects.create(username=new_account_details['username'])
+                user = User.objects.create_user(username=new_account_details['username'], password=new_account_details['password'])
                 student = Student.objects.create(user=user, nickname=new_account_details['nickname'])
 
                 try:
@@ -75,7 +77,8 @@ class AccountsViewSet(viewsets.ViewSet):
                 except Token.DoesNotExist:
                     token = make_token(new_account_details, student, session=s)
 
-                return Response({'token': token.key})
+                return Response({'auth_token': PasswordCrypto(user).encrypt(new_account_details['password']),
+                                 'session_token': token.key})
 
     @list_route(methods=['POST'], url_path='change-nickname')
     def change_nickname(self, request, *args, **kwargs):
@@ -95,6 +98,19 @@ class AccountsViewSet(viewsets.ViewSet):
     def get_object(self):
         return self.request.user.student
 
+    @list_route(methods=['POST'], url_path='make-auth-token', permission_classes=(AllowAny,))
+    def make_auth_token(self, request, *args, **kwargs):
+        serializer = AuthTokenRequestDeserializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+
+        try:
+            student = Student.objects.get(user__username=data['username'])
+        except Student.DoesNotExist:
+            raise NotFound("No such student exists")
+
+        return Response({'auth_token': PasswordCrypto(student.user).encrypt(data['password'])})
+
 
 class TokenViewSet(viewsets.ViewSet):
     """
@@ -113,6 +129,9 @@ class TokenViewSet(viewsets.ViewSet):
             student = Student.objects.get(user__username=data['username'])
         except Student.DoesNotExist:
             raise NotFound("No such student exists")
+
+        auth_token = data['auth_token']
+        data['password'] = PasswordCrypto(student.user).decrypt(auth_token)
 
         try:
             token = Token.objects.get(user=student.user)

@@ -9,6 +9,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate, RequestsC
 from .meetingbuilder import get_or_create_meetings
 from .models import Student, Meeting, Class, Building, Room, MeetingInstance, Beacon
 from .views import TimetableViewSet, AttendanceRecordViewSet
+from .crypto import PasswordCrypto
 
 
 class Timetables(TestCase):
@@ -242,3 +243,22 @@ class AttendanceRecords(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.data['detail'], 'The student is not in a class where this beacon is')
+
+
+class Crypto(TestCase):
+
+    def test_crypto(self):
+        password = "MyNameIsJim123$$"
+        self.user = User.objects.create_user(username='2072452q', password=password)
+
+        cipher = PasswordCrypto(self.user)
+
+        ciphertext = cipher.encrypt(password)
+        plaintext = cipher.decrypt(ciphertext)
+
+        print(password)
+        print(ciphertext)
+        print(plaintext)
+
+        self.assertEqual(password, plaintext)
+        self.assertNotEqual(password, ciphertext)

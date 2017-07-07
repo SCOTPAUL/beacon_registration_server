@@ -9,6 +9,7 @@ freezegun==0.3.8
 itypes==1.1.0
 Markdown==2.6.7
 openapi-codec==1.1.7
+pycrypto==2.6.1
 python-dateutil==2.6.0
 pytz==2016.7
 requests==2.11.1

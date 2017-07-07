@@ -43,8 +43,11 @@ class NewAccountDeserializer(serializers.Serializer):
 
 class StudentDeserializer(serializers.Serializer):
     username = serializers.CharField(max_length=140, required=True)
-    password = serializers.CharField(required=True)
+    auth_token = serializers.CharField(required=True)
 
+class AuthTokenRequestDeserializer(serializers.Serializer):
+    username = serializers.CharField(max_length=140, required=True)
+    password = serializers.CharField(required=True)
 
 class FriendDeserializer(serializers.Serializer):
     username = serializers.CharField(max_length=140, required=True)
