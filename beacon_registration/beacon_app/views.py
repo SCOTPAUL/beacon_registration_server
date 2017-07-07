@@ -233,6 +233,7 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
             data['time_end'] = meeting_inst.time_end
             data['room'] = meeting_inst.meeting.room.name
             data['building'] = meeting_inst.meeting.room.building.name
+            data['class_name'] = str(meeting_inst.meeting.class_rel)
 
         serializer = LocationSerializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -249,8 +250,18 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
     def list_friendships_involving_me(self, *args, **kwargs):
         student = self.get_object()
 
-        return Response(FriendshipSerializer(Friendship.objects.filter(
-            Q(initiating_student=student) | Q(receiving_student=student)), many=True).data)
+        response = {'friend_requests': [], 'friends': []}
+        for friendship in Friendship.objects.filter(Q(initiating_student=student) | Q(receiving_student=student)):
+            if not friendship.accepted and friendship.receiving_student == student:
+                response['friend_requests'].append(friendship.initiating_student if friendship.receiving_student == student
+                                                   else friendship.receiving_student)
+            elif friendship.accepted:
+                response['friends'].append(friendship.initiating_student if friendship.receiving_student == student
+                                           else friendship.receiving_student)
+
+        serializer = FriendsSerializer(response)
+
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         student = self.get_object()
