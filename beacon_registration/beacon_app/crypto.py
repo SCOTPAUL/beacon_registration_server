@@ -15,14 +15,16 @@ class PasswordCrypto:
         self.user = user
 
         split_pw = self.split_password()
-        self.key = split_pw['hash'][:32]
+        self.key = base64.b64decode(split_pw['hash'])
 
-    def _pkcs7_pad(self, plaintext: string) -> string:
+    @staticmethod
+    def _pkcs7_pad(plaintext: string) -> string:
         block_size = AES.block_size
         pad_length = block_size - (len(plaintext) % block_size)
         return plaintext + chr(pad_length) * pad_length
 
-    def _pkcs7_unpad(self, ciphertext: string) -> string:
+    @staticmethod
+    def _pkcs7_unpad(ciphertext: string) -> string:
         return ciphertext[:-int(ciphertext[-1])]
 
     def split_password(self) -> Dict:
@@ -32,7 +34,6 @@ class PasswordCrypto:
         :return: A dictionary containing each of the fields of the 'password' field
         """
         split_pw = self.user.password.split("$")
-
         return {'algorithm': split_pw[0], 'iterations': split_pw[1], 'salt': split_pw[2], 'hash': split_pw[3]}
 
     def encrypt(self, unencrypted_password: string) -> string:
@@ -42,10 +43,10 @@ class PasswordCrypto:
         return base64.b64encode(iv + cipher.encrypt(plaintext))
 
     def decrypt(self, b64_ciphertext: string):
-        cipertext = base64.b64decode(b64_ciphertext)
-        iv = cipertext[:AES.block_size]
+        ciphertext = base64.b64decode(b64_ciphertext)
+        iv = ciphertext[:AES.block_size]
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
-        return self._pkcs7_unpad(cipher.decrypt(cipertext[AES.block_size:])).decode('UTF-8')
+        return self._pkcs7_unpad(cipher.decrypt(ciphertext[AES.block_size:])).decode('UTF-8')
 
 
 
