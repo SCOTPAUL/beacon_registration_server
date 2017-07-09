@@ -493,3 +493,27 @@ class SourceViewSet(viewsets.ViewSet):
         else:
             return Response("There seems to be a configuration error. Please contact the developer at "
                             "paul.cowie@ntlworld.com")
+
+
+class LogEntryViewSet(viewsets.ViewSet):
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (ExpiringTokenAuthentication,)
+
+    @transaction.atomic()
+    @list_route(methods=['POST'], url_path='log-multiple')
+    def log_multiple(self, request, format=None):
+        student = self.get_object()
+
+        serializer = LogEntryDeserializer(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
+
+        logs = serializer.data
+
+        for log in logs:
+            LogEntry.objects.create(event_type=log['event_type'], event_text=log['event_text'],
+                                    timestamp=log['timestamp'], student=student)
+
+        return Response(status=status.HTTP_201_CREATED)
+
+    def get_object(self):
+        return self.request.user.student

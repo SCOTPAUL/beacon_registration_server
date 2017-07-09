@@ -4,7 +4,8 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from .utils import Streak
-from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord, Friendship
+from .models import Room, Beacon, Building, Class, Meeting, Student, MeetingInstance, AttendanceRecord, LogEntry,\
+    Friendship
 
 
 class BuildingSerializer(serializers.HyperlinkedModelSerializer):
@@ -272,3 +273,10 @@ class StreaksSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = ('overall', 'class_streaks')
+
+
+class LogEntryDeserializer(serializers.Serializer):
+    event_type = serializers.ChoiceField(choices=LogEntry.EVENT_TYPE_CHOICES, required=True)
+    event_text = serializers.CharField(required=True)
+    timestamp = serializers.DateTimeField(required=True)
+
