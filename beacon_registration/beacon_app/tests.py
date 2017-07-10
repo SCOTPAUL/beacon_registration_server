@@ -7,7 +7,7 @@ from freezegun import freeze_time
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIRequestFactory, force_authenticate, RequestsClient
 from .meetingbuilder import get_or_create_meetings
-from .models import Student, Meeting, Class, Building, Room, MeetingInstance, Beacon
+from .models import Student, Meeting, Class, Building, Room, MeetingInstance, Beacon, Friendship, AttendanceRecord
 from .views import TimetableViewSet, AttendanceRecordViewSet
 from .crypto import PasswordCrypto
 
@@ -17,9 +17,9 @@ class Timetables(TestCase):
         self.user = User.objects.create_user(username='2072452q')
         self.user2 = User.objects.create_user(username='2072452n')
         self.user3 = User.objects.create_user(username='2072452y')
-        self.student = Student.objects.create(user=self.user)
-        self.student2 = Student.objects.create(user=self.user2)
-        self.student3 = Student.objects.create(user=self.user3)
+        self.student = Student.objects.create(user=self.user, nickname="s1")
+        self.student2 = Student.objects.create(user=self.user2, nickname="s2")
+        self.student3 = Student.objects.create(user=self.user3, nickname="s3")
         self.token = Token.objects.create(user=self.user)
 
     def test_construction(self):
@@ -83,7 +83,9 @@ class Timetables(TestCase):
             any(entry['time_start'] == '12:00:00' and entry['class_name'] == 'CVMA (H)' for entry in response.json()))
 
     def test_access_shared_timetables(self):
-        self.student3.shared_with.add(self.student)
+
+        Friendship.objects.create(initiating_student=self.student, receiving_student=self.student3, accepted=True)
+
 
         # Self
         client = RequestsClient()
@@ -195,12 +197,14 @@ class AttendanceRecords(TestCase):
         request = factory.post('/attendance-records/', beacon_data)
         force_authenticate(request, user=self.user)
         response = view(request)
+
         self.assertEqual(response.status_code, 201)  # 201 Created
 
         # Check marked as attended
         client = RequestsClient()
         client.headers.update({'Authorization': 'Token ' + str(self.token.key)})
         response = client.get('http://testserver/api/timetables/2072452q/?day=2016-12-5')
+
         self.assertTrue(response.json()[0]['attended'])
 
     @freeze_time("Dec 5th, 2016 11:00:00")
@@ -255,10 +259,6 @@ class Crypto(TestCase):
 
         ciphertext = cipher.encrypt(password)
         plaintext = cipher.decrypt(ciphertext)
-
-        print(password)
-        print(ciphertext)
-        print(plaintext)
 
         self.assertEqual(password, plaintext)
         self.assertNotEqual(password, ciphertext)

@@ -207,7 +207,7 @@ class TimetableSerializer(serializers.Serializer):
         super(TimetableSerializer, self).__init__(*args, **kwargs)
 
         attended_meetings = AttendanceRecord.objects.filter(student=self.context['student'])
-        attended_meeting_ids = attended_meetings.values_list('id')
+        attended_meeting_ids = attended_meetings.values_list('id', flat=True)
 
         for meeting_instance in self.instance:
             meeting_instance._attended = meeting_instance.id in attended_meeting_ids
