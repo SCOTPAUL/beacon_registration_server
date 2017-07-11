@@ -368,9 +368,11 @@ class AttendanceRecord(models.Model):
     """
     A relation between a MeetingInstance and a Student, which marks that they attended that particular MeetingInstance
     """
-    meeting_instance = models.ForeignKey('MeetingInstance', related_name='attendance_records', db_index=True)
-    student = models.ForeignKey('Student', related_name='attendance_records', db_index=True)
-    time_attended = models.TimeField(editable=False, null=False, blank=False, auto_now_add=True)
+    meeting_instance = models.ForeignKey('MeetingInstance', related_name='attendance_records')
+    student = models.ForeignKey('Student', related_name='attendance_records')
+    time_attended = models.DateTimeField(null=False, blank=False)
+    created_at = models.DateTimeField(editable=False, null=False, blank=False, auto_now_add=True)
+    manually_created = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('meeting_instance', 'student')

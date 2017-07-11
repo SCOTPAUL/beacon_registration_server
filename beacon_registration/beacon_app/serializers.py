@@ -26,10 +26,11 @@ class BeaconSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('uuid', 'major', 'minor', 'room')
 
 
-class BeaconDeserializer(serializers.Serializer):
+class BeaconSightingDeserializer(serializers.Serializer):
     uuid = serializers.UUIDField(required=True)
     major = serializers.IntegerField(required=True)
     minor = serializers.IntegerField(required=True)
+    seen_at_time = serializers.DateTimeField(required=True)
 
 class NicknameChangeSerializer(serializers.Serializer):
     nickname = serializers.CharField(max_length=20, required=True,
@@ -213,7 +214,7 @@ class TimetableSerializer(serializers.Serializer):
             meeting_instance._attended = meeting_instance.id in attended_meeting_ids
 
 
-class AttendanceRecordSerializer(serializers.HyperlinkedModelSerializer):
+class AttendanceRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = AttendanceRecord
         fields = ('meeting_instance', 'time_attended')
