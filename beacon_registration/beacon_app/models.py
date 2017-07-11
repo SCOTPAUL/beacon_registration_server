@@ -49,6 +49,9 @@ class Student(models.Model):
     date_registered = models.DateField(editable=False, null=False, blank=False, auto_now_add=True)
     nickname = models.CharField(null=False, blank=False, unique=True, max_length=20)
 
+    # If True, no attempt will be made to sync with the University Timetable API
+    fake_account = models.BooleanField(default=False)
+
     def __str__(self):
         return self.user.username
 

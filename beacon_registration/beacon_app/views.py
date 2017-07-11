@@ -139,12 +139,13 @@ class TokenViewSet(viewsets.ViewSet):
                 token.delete()
                 token = make_token(data, student)
             else:
-                with requests.Session() as s:
-                    r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
-                               data={'guid': data['username'], 'password': data['password']})
+                if not student.fake_account:
+                    with requests.Session() as s:
+                        r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
+                                   data={'guid': data['username'], 'password': data['password']})
 
-                    if not r.status_code == requests.codes.ok:
-                        raise AuthenticationFailed("Wrong username or password")
+                        if not r.status_code == requests.codes.ok:
+                            raise AuthenticationFailed("Wrong username or password")
 
         except Token.DoesNotExist:
             token = make_token(data, student)
@@ -167,6 +168,9 @@ def do_sync(session: Session, student: Student):
 
 def make_token(data: ReturnDict, student: Student, session: Session=None) -> Token:
     token = Token.objects.create(user=student.user)
+
+    if student.fake_account:
+        return token
 
     if session:
         do_sync(session, student)
@@ -495,8 +499,7 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
 
         try:
             AttendanceRecord.objects.get(student=student, meeting_instance=meeting_instance)
-            # TODO: Replace with AlreadyExists
-            return Response("This attendance record already exists", status=status.HTTP_409_CONFLICT)
+            raise AlreadyExists("This attendance record already exists")
         except AttendanceRecord.DoesNotExist:
             record = AttendanceRecord.objects.create(student=student, meeting_instance=meeting_instance,
                                                      time_attended=data['seen_at_time'])
@@ -515,8 +518,7 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
             meeting_instance = MeetingInstance.objects.get(pk=pk)
             if AttendanceRecord.objects.filter(student=student,
                                                meeting_instance=meeting_instance).exists():
-                # TODO: Replace with AlreadyExists
-                return Response("You have already attended this meeting instance", status=status.HTTP_409_CONFLICT)
+                raise AlreadyExists("You have already attended this meeting instance")
             else:
                 attended_at = datetime.datetime.combine(meeting_instance.date, meeting_instance.meeting.time_start)
 

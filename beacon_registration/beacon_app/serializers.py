@@ -32,9 +32,11 @@ class BeaconSightingDeserializer(serializers.Serializer):
     minor = serializers.IntegerField(required=True)
     seen_at_time = serializers.DateTimeField(required=True)
 
+
 class NicknameChangeSerializer(serializers.Serializer):
     nickname = serializers.CharField(max_length=20, required=True,
                                      validators=[UniqueValidator(queryset=Student.objects.all())])
+
 
 class NewAccountDeserializer(serializers.Serializer):
     nickname = serializers.CharField(max_length=20, required=True,
@@ -43,13 +45,16 @@ class NewAccountDeserializer(serializers.Serializer):
                                      validators=[UniqueValidator(queryset=User.objects.all())])
     password = serializers.CharField(required=True)
 
+
 class StudentDeserializer(serializers.Serializer):
     username = serializers.CharField(max_length=140, required=True)
     auth_token = serializers.CharField(required=True)
 
+
 class AuthTokenRequestDeserializer(serializers.Serializer):
     username = serializers.CharField(max_length=140, required=True)
     password = serializers.CharField(required=True)
+
 
 class FriendDeserializer(serializers.Serializer):
     username = serializers.CharField(max_length=140, required=True)

@@ -17,7 +17,7 @@ def parse_events(events: EventsJson) -> List[Event]:
     def identity(val):
         return val
 
-    def split_room(val: str) -> Tuple[str, str]:
+    def split_room(val: str) -> Tuple[str, ...]:
         return tuple(val.split(':', 1))
 
     def make_time(val: str) -> datetime.time:
