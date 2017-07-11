@@ -182,8 +182,8 @@ class Lecturer(models.Model):
     """
     Representation of a person who leads a class meeting
     """
-
     name = models.CharField(unique=True, blank=False, null=False, max_length=140)
+    fake = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -234,6 +234,7 @@ class Building(models.Model):
     A collection of Rooms, in the same building
     """
     name = models.CharField(unique=True, blank=False, null=False, max_length=140)
+    fake = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -244,7 +245,8 @@ class Room(models.Model):
     Represents a room in a building
     """
     building = models.ForeignKey('Building', null=False, blank=False, related_name='rooms')
-    room_code = models.CharField(unique=True, max_length=140)
+    room_code = models.CharField(max_length=140)
+    fake = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('building', 'room_code')
@@ -264,6 +266,9 @@ class Class(models.Model):
     Represents a university course, which has some number of Meetings
     """
     class_code = models.CharField(unique=True, max_length=140)
+
+    # If True, this class is only used by fake Students, and can therefore be dropped without any issue
+    fake = models.BooleanField(default=False, editable=False)
 
     class Meta:
         verbose_name_plural = 'Classes'
@@ -311,6 +316,9 @@ class Meeting(models.Model):
     time_end = models.TimeField()
     day_of_week = models.IntegerField(choices=WEEKDAY_CHOICES, null=False, blank=False)
 
+    # If True, this Meeting is only used by fake Students, and can therefore be dropped without any issue
+    fake = models.BooleanField(default=False, editable=False)
+
     class_rel = models.ForeignKey('Class', related_name='meetings', verbose_name='Class')
 
     def weekday(self) -> str:
@@ -339,6 +347,10 @@ class MeetingInstance(models.Model):
     meeting = models.ForeignKey('Meeting', related_name='instances', db_index=True)
     room = models.ForeignKey('Room', related_name='meeting_instances')
     lecturer = models.ForeignKey('Lecturer', related_name='meeting_instances', null=True, blank=True)
+
+    # If True, this MeetingInstance is only used by fake Students, and can therefore be dropped without any issue
+    fake = models.BooleanField(default=False, editable=False)
+
 
     class Meta:
         unique_together = ('date', 'meeting', 'room')
@@ -376,6 +388,7 @@ class AttendanceRecord(models.Model):
     time_attended = models.DateTimeField(null=False, blank=False)
     created_at = models.DateTimeField(editable=False, null=False, blank=False, auto_now_add=True)
     manually_created = models.BooleanField(default=False)
+    fake = models.BooleanField(default=False, editable=False)
 
     class Meta:
         unique_together = ('meeting_instance', 'student')
