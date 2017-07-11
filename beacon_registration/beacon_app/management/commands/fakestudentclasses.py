@@ -37,7 +37,7 @@ def generate_fake_lecturer_name():
 
 def is_weekday(date_instance):
     day_of_week = date_instance.weekday()
-    return day_of_week <= 5
+    return day_of_week < 5
 
 
 @transaction.atomic()
@@ -48,7 +48,7 @@ def drop_and_create_all():
     Room.objects.filter(fake=True).delete()
     Building.objects.filter(fake=True).delete()
     Lecturer.objects.filter(fake=True).delete()
-    AttendanceRecord.objects.filter(student__fake_account=True).delete()
+    AttendanceRecord.objects.filter(fake=True).delete()
 
     create_fake_meetings()
     create_fake_student_relations()
@@ -70,6 +70,10 @@ def create_fake_meetings():
 
             if random.random() > 0.6:
                 duration_hrs = min(weighted_choice(((1, 0.5), (2, 0.4), (3, 0.1))), 17 - hour_of_day)
+
+                for hour in range(hour_of_day, hour_of_day + duration_hrs):
+                    filled_hours.append(hour)
+
                 fake_class, _ = Class.objects.get_or_create(class_code=random.choice(fake_class_names), fake=True)
                 fake_meeting, _ = Meeting.objects.get_or_create(day_of_week=day.weekday(),
                                                                 time_start=time(hour_of_day, 0),
@@ -91,9 +95,9 @@ def create_fake_meetings():
                                                       fake=True)
 
 
-
 def create_fake_student_relations():
     for student in Student.objects.filter(fake_account=True).all():
+
         attendance_aim = random.gauss(0.75, 0.25)
 
         if attendance_aim < 0.4:
