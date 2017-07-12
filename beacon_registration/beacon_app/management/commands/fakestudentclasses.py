@@ -1,10 +1,13 @@
 from datetime import date, timedelta, time, datetime
 import random
 
+import pytz
 from django.core.management import BaseCommand
 from django.db import transaction
 
 from beacon_app.models import Meeting, Class, MeetingInstance, Building, Room, Lecturer, AttendanceRecord, Student, Beacon
+
+from beacon_registration import settings
 
 fake_class_names = ["Advanced Sleeping", "Intro To Fake Data", "Django Apps III (H)",
                     "Advanced Android Algorithmics (M)", "Machine Forgetting (H)", "Computer Visionaries 2",
@@ -111,6 +114,8 @@ def create_fake_meetings():
 
 
 def create_fake_student_relations():
+    tz = pytz.timezone(settings.TIME_ZONE)
+
     for student in Student.objects.filter(fake_account=True).all():
         attendance_aim = random.gauss(0.6, 0.25)
 
@@ -129,7 +134,7 @@ def create_fake_student_relations():
 
                     AttendanceRecord.objects.get_or_create(meeting_instance=inst,
                                                            student=student,
-                                                           time_attended=attended_at,
+                                                           time_attended=attended_at.replace(tzinfo=tz),
                                                            manually_created=True,
                                                            fake=True)
 

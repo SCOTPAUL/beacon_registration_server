@@ -1,3 +1,4 @@
+import pytz
 import requests
 from django.db import transaction
 from requests import Session
@@ -65,7 +66,8 @@ class AccountsViewSet(viewsets.ViewSet):
             if not r.status_code == requests.codes.ok:
                 raise AuthenticationFailed("Wrong username or password")
             else:
-                user = User.objects.create_user(username=new_account_details['username'], password=new_account_details['password'])
+                user = User.objects.create_user(username=new_account_details['username'],
+                                                password=new_account_details['password'])
                 student = Student.objects.create(user=user, nickname=new_account_details['nickname'])
 
                 try:
@@ -513,6 +515,8 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
 
     @detail_route(methods=['POST'], url_path='force-creation')
     def force_record_creation(self, request, format=None, pk=None):
+        tz = pytz.timezone(settings.TIME_ZONE)
+
         student = self.request.user.student
 
         if pk is None:
@@ -527,7 +531,7 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
                 attended_at = datetime.datetime.combine(meeting_instance.date, meeting_instance.meeting.time_start)
 
                 record = AttendanceRecord.objects.create(student=student, meeting_instance=meeting_instance,
-                                                         time_attended=attended_at,
+                                                         time_attended=attended_at.replace(tzinfo=tz),
                                                          manually_created=True)
 
                 return Response(AttendanceRecordSerializer(record).data,
