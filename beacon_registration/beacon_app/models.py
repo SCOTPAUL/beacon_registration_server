@@ -46,7 +46,9 @@ class Student(models.Model):
     Representation of a student
     """
     user = models.OneToOneField(User, unique=True)
-    date_registered = models.DateField(editable=False, null=False, blank=False, auto_now_add=True)
+    date_registered = models.DateField(null=False, blank=False, auto_now_add=True)
+    date_registered.editable = True
+
     nickname = models.CharField(null=False, blank=False, unique=True, max_length=20)
 
     # If True, no attempt will be made to sync with the University Timetable API
@@ -440,9 +442,8 @@ def attendance_streaks(student: Student, class_: Union[None, Class] = None) -> L
 
     instances = MeetingInstance.objects.filter(meeting__in=meetings)
     contributing = instances.filter(Q(date__gte=student.date_registered) &
-                                    ((Q(date__lt=today) | Q(date=today, meeting__time_end__lte=time_now)) &
-                                     Q(room__beacons__isnull=False) &
-                                     Q(room__beacons__date_added__lte=F('date'))))
+                                    (Q(date__lt=today) | Q(date=today, meeting__time_end__lte=time_now)))
+
     sorted_ = contributing.order_by('date')
 
     streaks = []
@@ -461,7 +462,7 @@ def attendance_streaks(student: Student, class_: Union[None, Class] = None) -> L
 
     if streak_start is not None:
         # A streak started, but has not yet ended
-        valid_instances = instances.filter(room__beacons__isnull=False).order_by('-date')
+        valid_instances = instances.order_by('-date')
         if len(valid_instances) > 0:
             last_date_of_year = valid_instances[0].date
         else:

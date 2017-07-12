@@ -6,8 +6,9 @@ from django.db import transaction
 
 from beacon_app.models import Meeting, Class, MeetingInstance, Building, Room, Lecturer, AttendanceRecord, Student, Beacon
 
-fake_class_names = ["Advanced Sleeping", "Intro To Fake Data", "Django Apps III (H)", "Advanced Android Algorithmics (M)",
-                    "Machine Forgetting (H)", "Computer Visionaries 2"]
+fake_class_names = ["Advanced Sleeping", "Intro To Fake Data", "Django Apps III (H)",
+                    "Advanced Android Algorithmics (M)", "Machine Forgetting (H)", "Computer Visionaries 2",
+                    "Ice Skating 3", "Dance Dance Revolution M", "Vogon Poetry Analysis"]
 
 fake_room_names = [str(num) for num in range(1000)]
 fake_buildings = ["Starbucks", "Queen Margaret Union Garden", "Subway", "Costa Coffee"]
