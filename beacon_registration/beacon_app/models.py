@@ -354,7 +354,6 @@ class MeetingInstance(models.Model):
     # If True, this MeetingInstance is only used by fake Students, and can therefore be dropped without any issue
     fake = models.BooleanField(default=False, editable=False)
 
-
     class Meta:
         unique_together = ('date', 'meeting', 'room')
 

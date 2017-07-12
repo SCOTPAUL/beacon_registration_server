@@ -292,7 +292,11 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
         serializer = FriendDeserializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         new_friend_username = serializer.validated_data
-        new_friend = Student.objects.get(user__username=new_friend_username['username'])
+
+        try:
+            new_friend = Student.objects.get(user__username=new_friend_username['username'])
+        except Student.DoesNotExist:
+            raise NotFound("No such student exists")
 
         if new_friend == student:
             raise ParseError(detail="Can't add self as a friend")

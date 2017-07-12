@@ -59,13 +59,6 @@ class AuthTokenRequestDeserializer(serializers.Serializer):
 class FriendDeserializer(serializers.Serializer):
     username = serializers.CharField(max_length=140, required=True)
 
-    @staticmethod
-    def validate_username(value: str) -> str:
-        if not Student.objects.filter(user__username=value).exists():
-            raise serializers.ValidationError("Student doesn't exist")
-
-        return value
-
 
 class ReservedNameSerializer(serializers.Serializer):
     """Allows the usage of reserved fieldnames by appending a '_' to the field name in a subclass"""
