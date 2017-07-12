@@ -4,7 +4,7 @@ import random
 from django.core.management import BaseCommand
 from django.db import transaction
 
-from beacon_app.models import Meeting, Class, MeetingInstance, Building, Room, Lecturer, AttendanceRecord, Student
+from beacon_app.models import Meeting, Class, MeetingInstance, Building, Room, Lecturer, AttendanceRecord, Student, Beacon
 
 fake_class_names = ["Advanced Sleeping", "Intro To Fake Data", "Django Apps III (H)", "Advanced Android Algorithmics (M)",
                     "Machine Forgetting (H)", "Computer Visionaries 2"]
@@ -49,6 +49,7 @@ def drop_and_create_all():
     Building.objects.filter(fake=True).delete()
     Lecturer.objects.filter(fake=True).delete()
     AttendanceRecord.objects.filter(fake=True).delete()
+    Beacon.objects.filter(fake=True).delete()
 
     create_fake_meetings()
     create_fake_student_relations()
@@ -57,6 +58,10 @@ def drop_and_create_all():
 def create_fake_meetings():
     start_date = date(2017, 6, 1)
     end_date = date(2017, 9, 1)
+
+    fake_beacon_uuid = "f7826da6-4fa2-4e98-8024-bc5b71e0893f"
+    fake_beacon_major = 156
+    fake_beacon_minor = 0
 
     valid_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days)]
     valid_weekdays = [day for day in valid_dates if is_weekday(day)]
@@ -87,6 +92,15 @@ def create_fake_meetings():
                                                           room_code=random.choice(fake_room_names),
                                                           fake=True)
 
+                if random.random() < 0.8:
+                    fake_beacon, _ = Beacon.objects.get_or_create(uuid=fake_beacon_uuid,
+                                                                  major=fake_beacon_major,
+                                                                  minor=fake_beacon_minor,
+                                                                  room=fake_room,
+                                                                  date_added=date(2017, 1, 1),
+                                                                  fake=True)
+                    fake_beacon_minor += 1
+
                 fake_lecturer, _ = Lecturer.objects.get_or_create(name=generate_fake_lecturer_name(), fake=True)
 
                 MeetingInstance.objects.get_or_create(date=day, meeting=fake_meeting,
@@ -97,7 +111,6 @@ def create_fake_meetings():
 
 def create_fake_student_relations():
     for student in Student.objects.filter(fake_account=True).all():
-
         attendance_aim = random.gauss(0.75, 0.25)
 
         if attendance_aim < 0.4:

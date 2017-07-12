@@ -221,6 +221,7 @@ class Beacon(models.Model):
     minor = models.IntegerField()
     room = models.ForeignKey('Room', related_name='beacons')
     date_added = models.DateField(default=timezone.now)
+    fake = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('uuid', 'major', 'minor')
