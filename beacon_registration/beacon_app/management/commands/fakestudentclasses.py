@@ -57,7 +57,7 @@ def drop_and_create_all():
 
 
 def create_fake_meetings():
-    start_date = date(2017, 6, 1)
+    start_date = date(2016, 8, 1)
     end_date = date(2017, 9, 1)
 
     fake_beacon_uuid = "f7826da6-4fa2-4e98-8024-bc5b71e0893f"
@@ -74,7 +74,7 @@ def create_fake_meetings():
             if hour_of_day in filled_hours:
                 continue
 
-            if random.random() > 0.6:
+            if random.random() > 0.8:
                 duration_hrs = min(weighted_choice(((1, 0.5), (2, 0.4), (3, 0.1))), 17 - hour_of_day)
 
                 for hour in range(hour_of_day, hour_of_day + duration_hrs):
@@ -98,7 +98,7 @@ def create_fake_meetings():
                                                                   major=fake_beacon_major,
                                                                   minor=fake_beacon_minor,
                                                                   room=fake_room,
-                                                                  date_added=date(2017, 1, 1),
+                                                                  date_added=start_date,
                                                                   fake=True)
                     fake_beacon_minor += 1
 
@@ -112,10 +112,10 @@ def create_fake_meetings():
 
 def create_fake_student_relations():
     for student in Student.objects.filter(fake_account=True).all():
-        attendance_aim = random.gauss(0.75, 0.25)
+        attendance_aim = random.gauss(0.6, 0.25)
 
-        if attendance_aim < 0.4:
-            attendance_aim = 0.4
+        if attendance_aim < 0.0:
+            attendance_aim = 0.0
         elif attendance_aim > 1.0:
             attendance_aim = 1.0
 
@@ -124,7 +124,7 @@ def create_fake_student_relations():
             meeting.save()
 
             for inst in meeting.instances.all():
-                if random.random() > attendance_aim:
+                if random.random() < attendance_aim:
                     attended_at = datetime.combine(inst.date, inst.meeting.time_start)
 
                     AttendanceRecord.objects.get_or_create(meeting_instance=inst,
@@ -132,6 +132,9 @@ def create_fake_student_relations():
                                                            time_attended=attended_at,
                                                            manually_created=True,
                                                            fake=True)
+
+        print("Attendance Aim: {}".format(attendance_aim))
+
 
 
 class Command(BaseCommand):
