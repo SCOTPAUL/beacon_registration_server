@@ -155,6 +155,7 @@ class FriendsSerializer(serializers.Serializer):
     friend_requests = FriendRequestSerializer(many=True)
     friends = SimpleStudentSerializer(many=True)
 
+
 class FriendshipSerializer(serializers.ModelSerializer):
     from_user = serializers.StringRelatedField(source='initiating_student', read_only=True)
     from_user_nickname = serializers.StringRelatedField(source='initiating_student.nickname', read_only=True)

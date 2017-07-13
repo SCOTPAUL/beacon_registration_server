@@ -82,20 +82,25 @@ class AccountsViewSet(viewsets.ViewSet):
                 return Response({'auth_token': PasswordCrypto(user).encrypt(new_account_details['password']),
                                  'session_token': token.key})
 
-    @list_route(methods=['POST'], url_path='change-nickname')
-    def change_nickname(self, request, *args, **kwargs):
+    @list_route(methods=['POST', 'GET'], url_path='nickname')
+    def nickname(self, request, *args, **kwargs):
         student = self.get_object()
-        if request.data.get('nickname', None) == student.nickname:
+
+        if request.method == 'POST':
+            if request.data.get('nickname', None) == student.nickname:
+                return Response(SimpleStudentSerializer(student).data, status=status.HTTP_200_OK)
+
+            serializer = NicknameChangeSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            new_nickname = serializer.data['nickname']
+            student.nickname = new_nickname
+            student.save()
+
             return Response(SimpleStudentSerializer(student).data, status=status.HTTP_200_OK)
 
-        serializer = NicknameChangeSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        new_nickname = serializer.data['nickname']
-        student.nickname = new_nickname
-        student.save()
-
-        return Response(SimpleStudentSerializer(student).data, status=status.HTTP_200_OK)
+        elif request.method == 'GET':
+            return Response({'nickname': student.nickname})
 
     def get_object(self):
         return self.request.user.student
