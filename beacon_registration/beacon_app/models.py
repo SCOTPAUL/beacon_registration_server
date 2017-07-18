@@ -253,6 +253,7 @@ class Room(models.Model):
 
     class Meta:
         unique_together = ('building', 'room_code')
+        ordering = ('building__name', 'room_code')
 
     def __str__(self):
         return '{}: {}'.format(self.building, self.room_code)
