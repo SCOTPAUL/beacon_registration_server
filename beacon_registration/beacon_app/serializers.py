@@ -35,13 +35,21 @@ class BeaconSightingDeserializer(serializers.Serializer):
 
 class NicknameChangeSerializer(serializers.Serializer):
     nickname = serializers.CharField(max_length=20, required=True,
-                                     validators=[UniqueValidator(queryset=Student.objects.all())])
-
+                                     validators=[UniqueValidator(queryset=Student.objects.all(),
+                                                                 message="This username is already taken")],
+                                     error_messages={
+                                         'max_length': "Username cannot be over 20 characters long"
+                                     })
 
 class NewAccountDeserializer(serializers.Serializer):
     nickname = serializers.CharField(max_length=20, required=True,
-                                     validators=[UniqueValidator(queryset=Student.objects.all())])
-    username = serializers.CharField(max_length=140, required=True,
+                                     validators=[UniqueValidator(queryset=Student.objects.all(),
+                                                                 message="This username is already taken")],
+                                     error_messages={
+                                         'max_length': "Username cannot be over 20 characters long"
+                                     })
+
+    username = serializers.CharField(max_length=20, required=True,
                                      validators=[UniqueValidator(queryset=User.objects.all())])
     password = serializers.CharField(required=True)
 

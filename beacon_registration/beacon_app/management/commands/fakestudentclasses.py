@@ -115,6 +115,7 @@ def create_fake_meetings():
 
 def create_fake_student_relations():
     tz = pytz.timezone(settings.TIME_ZONE)
+    now = datetime.now()
 
     for student in Student.objects.filter(fake_account=True).all():
         attendance_aim = random.gauss(0.6, 0.25)
@@ -131,12 +132,13 @@ def create_fake_student_relations():
             for inst in meeting.instances.all():
                 if random.random() < attendance_aim:
                     attended_at = datetime.combine(inst.date, inst.meeting.time_start)
+                    if attended_at <= now:
 
-                    AttendanceRecord.objects.get_or_create(meeting_instance=inst,
-                                                           student=student,
-                                                           time_attended=attended_at.replace(tzinfo=tz),
-                                                           manually_created=True,
-                                                           fake=True)
+                        AttendanceRecord.objects.get_or_create(meeting_instance=inst,
+                                                               student=student,
+                                                               time_attended=attended_at.replace(tzinfo=tz),
+                                                               manually_created=True,
+                                                               fake=True)
 
         print("Attendance Aim: {}".format(attendance_aim))
 
