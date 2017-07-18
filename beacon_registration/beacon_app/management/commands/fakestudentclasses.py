@@ -45,7 +45,7 @@ def is_weekday(date_instance):
 
 
 @transaction.atomic()
-def drop_and_create_all():
+def drop_and_create_all(attendance_aim=None):
     Class.objects.filter(fake=True).delete()
     Meeting.objects.filter(fake=True).delete()
     MeetingInstance.objects.filter(fake=True).delete()
@@ -56,7 +56,7 @@ def drop_and_create_all():
     Beacon.objects.filter(fake=True).delete()
 
     create_fake_meetings()
-    create_fake_student_relations()
+    create_fake_student_relations(attendance_aim)
 
 
 def create_fake_meetings():
@@ -113,12 +113,13 @@ def create_fake_meetings():
                                                       fake=True)
 
 
-def create_fake_student_relations():
+def create_fake_student_relations(attendance_aim=None):
     tz = pytz.timezone(settings.TIME_ZONE)
     now = datetime.now()
 
     for student in Student.objects.filter(fake_account=True).all():
-        attendance_aim = random.gauss(0.6, 0.25)
+        if attendance_aim is None:
+            attendance_aim = random.gauss(0.6, 0.25)
 
         if attendance_aim < 0.0:
             attendance_aim = 0.0
@@ -147,6 +148,12 @@ def create_fake_student_relations():
 class Command(BaseCommand):
     help = 'Adds fake data for fake users'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--attendance', action='store', dest='attendance', default=None,
+                            type=float, help='The attendance that test users should have')
+
     def handle(self, *args, **options):
-        drop_and_create_all()
+        attendance = options['attendance']
+        drop_and_create_all(attendance)
         self.stdout.write(self.style.SUCCESS('Generated data'))
+

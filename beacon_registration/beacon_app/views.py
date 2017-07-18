@@ -148,6 +148,7 @@ class TokenViewSet(viewsets.ViewSet):
             else:
                 if not student.fake_account:
                     with requests.Session() as s:
+
                         r = s.post("https://frontdoor.spa.gla.ac.uk/spacett/login.m",
                                    data={'guid': data['username'], 'password': data['password']})
 
