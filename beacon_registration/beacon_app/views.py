@@ -261,7 +261,7 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
         else:
             meeting_inst = data['meeting_instance']
             data['time_start'] = meeting_inst.meeting.time_start
-            data['time_end'] = meeting_inst.time_end
+            data['time_end'] = meeting_inst.meeting.time_end
             data['room'] = meeting_inst.meeting.room.name
             data['building'] = meeting_inst.meeting.room.building.name
             data['class_name'] = str(meeting_inst.meeting.class_rel)
