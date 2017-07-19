@@ -453,7 +453,7 @@ class AttendanceRecordViewSet(viewsets.ViewSet):
         serializer = BeaconSightingDeserializer(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
 
-        beacon_sightings = serializer.data
+        beacon_sightings = serializer.validated_data
         new_attendance_records = []
 
         for sighting in beacon_sightings:

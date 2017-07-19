@@ -65,4 +65,5 @@ class AttendanceRecordAdmin(admin.ModelAdmin):
 @admin.register(LogEntry)
 class LogEntryAdmin(admin.ModelAdmin):
     readonly_fields = ('event_type', 'event_text', 'timestamp', 'server_timestamp', 'student')
+    search_fields = ('event_type', 'event_text', 'student__user__username')
 

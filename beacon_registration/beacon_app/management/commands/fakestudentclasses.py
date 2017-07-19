@@ -45,7 +45,7 @@ def is_weekday(date_instance):
 
 
 @transaction.atomic()
-def drop_and_create_all(attendance_aim=None):
+def drop_and_create_all(start_hour, end_hour, attendance_aim=None):
     Class.objects.filter(fake=True).delete()
     Meeting.objects.filter(fake=True).delete()
     MeetingInstance.objects.filter(fake=True).delete()
@@ -55,11 +55,11 @@ def drop_and_create_all(attendance_aim=None):
     AttendanceRecord.objects.filter(fake=True).delete()
     Beacon.objects.filter(fake=True).delete()
 
-    create_fake_meetings()
+    create_fake_meetings(start_hour, end_hour)
     create_fake_student_relations(attendance_aim)
 
 
-def create_fake_meetings():
+def create_fake_meetings(start_hour, end_hour):
     start_date = date(2016, 8, 1)
     end_date = date(2017, 9, 1)
 
@@ -73,12 +73,12 @@ def create_fake_meetings():
     for day in valid_weekdays:
         filled_hours = []
 
-        for hour_of_day in range(9, 17):
+        for hour_of_day in range(start_hour, end_hour):
             if hour_of_day in filled_hours:
                 continue
 
             if random.random() > 0.8:
-                duration_hrs = min(weighted_choice(((1, 0.5), (2, 0.4), (3, 0.1))), 17 - hour_of_day)
+                duration_hrs = min(weighted_choice(((1, 0.5), (2, 0.4), (3, 0.1))), end_hour - hour_of_day)
 
                 for hour in range(hour_of_day, hour_of_day + duration_hrs):
                     filled_hours.append(hour)
@@ -152,8 +152,15 @@ class Command(BaseCommand):
         parser.add_argument('--attendance', action='store', dest='attendance', default=None,
                             type=float, help='The attendance that test users should have')
 
+        parser.add_argument('--start-time', action='store', dest='start_time', default=9,
+                            type=int, help='The time that classes can start at (default 9AM)')
+
+        parser.add_argument('--end-time', action='store', dest='end_time', default=17,
+                            type=int, help='The time that classes end at (default 5PM)')
+
     def handle(self, *args, **options):
         attendance = options['attendance']
-        drop_and_create_all(attendance)
+
+        drop_and_create_all(attendance_aim=attendance, start_hour=options['start_time'], end_hour=options['end_time'])
         self.stdout.write(self.style.SUCCESS('Generated data'))
 

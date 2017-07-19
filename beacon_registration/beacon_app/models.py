@@ -73,7 +73,7 @@ class Student(models.Model):
 
         current_datetime = datetime.datetime.now()
         classes_on_now = MeetingInstance.objects.filter(
-            meeting=self.meeting_set.filter(
+            meeting__in=self.meeting_set.filter(
                 time_start__lte=current_datetime.time(),
                 time_end__gte=current_datetime.time()),
             date=current_datetime.date()
@@ -102,7 +102,7 @@ class Student(models.Model):
         """
         current_datetime = datetime.datetime.now()
         classes_on_now = MeetingInstance.objects.filter(
-            meeting=self.meeting_set.filter(
+            meeting__in=self.meeting_set.filter(
                 time_start__lte=current_datetime.time(),
                 time_end__gte=current_datetime.time()),
             date=current_datetime.date()
@@ -253,6 +253,7 @@ class Room(models.Model):
 
     class Meta:
         unique_together = ('building', 'room_code')
+        ordering = ('building__name', 'room_code')
 
     def __str__(self):
         return '{}: {}'.format(self.building, self.room_code)
