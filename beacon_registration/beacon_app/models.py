@@ -73,7 +73,7 @@ class Student(models.Model):
 
         current_datetime = datetime.datetime.now()
         classes_on_now = MeetingInstance.objects.filter(
-            meeting=self.meeting_set.filter(
+            meeting__in=self.meeting_set.filter(
                 time_start__lte=current_datetime.time(),
                 time_end__gte=current_datetime.time()),
             date=current_datetime.date()
