@@ -92,7 +92,7 @@ class Student(models.Model):
                     return location_dict
 
             location_dict['meeting_instance'] = classes_on_now[0]
-            location_dict['location_status'] = LocationStatus.NO_CLASS.value
+            location_dict['location_status'] = LocationStatus.NOT_SEEN_IN_CLASS.value
             return location_dict
 
     @property
