@@ -96,16 +96,22 @@ def create_fake_meetings(start_hour, end_hour):
                                                           room_code=random.choice(fake_room_names),
                                                           fake=True)
 
-                if random.random() < 0.8:
-                    fake_beacon, _ = Beacon.objects.get_or_create(uuid=fake_beacon_uuid,
-                                                                  major=fake_beacon_major,
-                                                                  minor=fake_beacon_minor,
-                                                                  room=fake_room,
-                                                                  date_added=start_date,
-                                                                  fake=True)
-                    fake_beacon_minor += 1
-
                 fake_lecturer, _ = Lecturer.objects.get_or_create(name=generate_fake_lecturer_name(), fake=True)
+
+                if random.random() > 0.95:
+                    fake_lecturer = None
+
+                if random.random() > 0.95:
+                    fake_room = None
+                else:
+                    if random.random() < 0.8:
+                        fake_beacon, _ = Beacon.objects.get_or_create(uuid=fake_beacon_uuid,
+                                                                      major=fake_beacon_major,
+                                                                      minor=fake_beacon_minor,
+                                                                      room=fake_room,
+                                                                      date_added=start_date,
+                                                                      fake=True)
+                        fake_beacon_minor += 1
 
                 MeetingInstance.objects.get_or_create(date=day, meeting=fake_meeting,
                                                       room=fake_room,
