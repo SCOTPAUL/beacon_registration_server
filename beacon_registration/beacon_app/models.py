@@ -47,7 +47,6 @@ class Student(models.Model):
     """
     user = models.OneToOneField(User, unique=True)
     date_registered = models.DateField(null=False, blank=False, auto_now_add=True)
-    date_registered.editable = True
 
     nickname = models.CharField(null=False, blank=False, unique=True, max_length=20)
 
@@ -349,7 +348,7 @@ class MeetingInstance(models.Model):
     """
     date = models.DateField()
     meeting = models.ForeignKey('Meeting', related_name='instances', db_index=True)
-    room = models.ForeignKey('Room', related_name='meeting_instances')
+    room = models.ForeignKey('Room', related_name='meeting_instances', null=True, blank=True)
     lecturer = models.ForeignKey('Lecturer', related_name='meeting_instances', null=True, blank=True)
 
     # If True, this MeetingInstance is only used by fake Students, and can therefore be dropped without any issue
