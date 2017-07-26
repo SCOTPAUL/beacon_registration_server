@@ -301,8 +301,14 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
         friend_requests = []
         for friendship in Friendship.objects.filter(Q(initiating_student=student) | Q(receiving_student=student)):
             if not friendship.accepted and friendship.receiving_student == student:
-                friend_requests.append({'friend': friendship.initiating_student if friendship.receiving_student == student
-                                        else friendship.receiving_student, 'created_at': friendship.created_at})
+                if friendship.initiating_student == student:
+                    friend = friendship.receiving_student
+                else:
+                    friend = friendship.initiating_student
+
+                friend_requests.append({'from_user_username': friend.user.username,
+                                        'from_user_nickname': friend.nickname,
+                                        'created_at': friendship.created_at})
 
         return Response(friend_requests)
 
