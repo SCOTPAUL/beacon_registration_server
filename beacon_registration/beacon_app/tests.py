@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from freezegun import freeze_time
 from rest_framework.authtoken.models import Token
+import dateutil.parser
 from rest_framework.test import APIRequestFactory, force_authenticate, RequestsClient
 from .meetingbuilder import get_or_create_meetings
 from .models import Student, Meeting, Class, Building, Room, MeetingInstance, Beacon, Friendship, AttendanceRecord
@@ -32,6 +33,8 @@ class Timetables(TestCase):
 
         self.assertEqual(len(self.student.classes), 8)
         self.assertEqual(len(inactive_meetings), 0)
+
+        self.assertEqual(MeetingInstance.objects.filter(room=None).count(), 1)
 
     def test_meetings_inactive(self):
         old_class = Class.objects.create(class_code="Advanced Sleeping")
@@ -193,7 +196,8 @@ class AttendanceRecords(TestCase):
 
         # Add attendance record
         view = AttendanceRecordViewSet.as_view({'post': 'create'})
-        beacon_data = {'uuid': '123e4567-e89b-12d3-a456-426655440000', 'major': 1, 'minor': 1}
+        beacon_data = {'uuid': '123e4567-e89b-12d3-a456-426655440000', 'major': 1, 'minor': 1,
+                       'seen_at_time': dateutil.parser.parse("Dec 5th, 2016 09:00:00")}
         request = factory.post('/attendance-records/', beacon_data)
         force_authenticate(request, user=self.user)
         response = view(request)
@@ -211,7 +215,8 @@ class AttendanceRecords(TestCase):
     def test_wrong_time(self):
         factory = APIRequestFactory()
         view = AttendanceRecordViewSet.as_view({'post': 'create'})
-        beacon_data = {'uuid': '123e4567-e89b-12d3-a456-426655440000', 'major': 1, 'minor': 1}
+        beacon_data = {'uuid': '123e4567-e89b-12d3-a456-426655440000', 'major': 1, 'minor': 1,
+                       'seen_at_time': dateutil.parser.parse("Dec 5th, 2016 11:00:00")}
 
         request = factory.post('/attendance-records/', beacon_data)
 
@@ -227,7 +232,8 @@ class AttendanceRecords(TestCase):
         # Test for non existent beacon details
         factory = APIRequestFactory()
         view = AttendanceRecordViewSet.as_view({'post': 'create'})
-        beacon_data = {'uuid': '123e4567-e89b-12d3-a456-426655440000', 'major': 1, 'minor': 2}
+        beacon_data = {'uuid': '123e4567-e89b-12d3-a456-426655440000', 'major': 1, 'minor': 2,
+                       'seen_at_time': dateutil.parser.parse("Dec 5th, 2016 09:00:00")}
 
         request = factory.post('/attendance-records/', beacon_data)
 
@@ -238,7 +244,9 @@ class AttendanceRecords(TestCase):
         self.assertEqual(response.data['detail'], 'No such beacon exists')
 
         # Test for existing beacon details, where the student doesn't have a meeting in that room
-        existing_beacon_data = {'uuid': '123e4567-e89b-12d3-a456-426655440000', 'major': 2, 'minor': 1}
+        existing_beacon_data = {'uuid': '123e4567-e89b-12d3-a456-426655440000', 'major': 2, 'minor': 1,
+                                'seen_at_time': dateutil.parser.parse("Dec 5th, 2016 09:00:00")
+        }
 
         request = factory.post('/attendance-records/', existing_beacon_data)
 

@@ -349,7 +349,7 @@ class MeetingInstance(models.Model):
     """
     date = models.DateField()
     meeting = models.ForeignKey('Meeting', related_name='instances', db_index=True)
-    room = models.ForeignKey('Room', related_name='meeting_instances')
+    room = models.ForeignKey('Room', related_name='meeting_instances', null=True, blank=True)
     lecturer = models.ForeignKey('Lecturer', related_name='meeting_instances', null=True, blank=True)
 
     # If True, this MeetingInstance is only used by fake Students, and can therefore be dropped without any issue

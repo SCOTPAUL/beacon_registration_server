@@ -17,7 +17,10 @@ def parse_events(events: EventsJson) -> List[Event]:
     def identity(val):
         return val
 
-    def split_room(val: str) -> Tuple[str, ...]:
+    def split_room(val: str) -> Union[Tuple[str, ...], None]:
+        if val is None:
+            return val
+
         return tuple(val.split(':', 1))
 
     def make_time(val: str) -> datetime.time:
@@ -111,8 +114,11 @@ def get_or_create_meetings(json_data: List[Dict], student: Student):
                 else:
                     lecturer = None
 
-                building = Building.objects.get_or_create(name=instance['room'][0])[0]
-                room = Room.objects.get_or_create(building=building, room_code=instance['room'][1])[0]
+                if instance['room'] is not None:
+                    building = Building.objects.get_or_create(name=instance['room'][0])[0]
+                    room = Room.objects.get_or_create(building=building, room_code=instance['room'][1])[0]
+                else:
+                    room = None
 
                 meet_inst = MeetingInstance.objects.get_or_create(date=instance['date'], room=room, meeting=meeting)[0]
                 meet_inst.lecturer = lecturer
