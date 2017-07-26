@@ -294,6 +294,20 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
 
         return Response(serializer.data)
 
+    @list_route(methods=['GET'], permission_classes=(IsAuthenticated,), url_path='friend-requests')
+    def list_friend_requests(self, *args, **kwargs):
+        student = self.get_object()
+
+        friend_requests = []
+        for friendship in Friendship.objects.filter(Q(initiating_student=student) | Q(receiving_student=student)):
+            if not friendship.accepted and friendship.receiving_student == student:
+                friend_requests.append(friendship.initiating_student if friendship.receiving_student == student
+                                       else friendship.receiving_student)
+
+        serializer = FriendRequestSerializer(friend_requests, many=True)
+
+        return Response(serializer.data)
+
     def create(self, request, *args, **kwargs):
         student = self.get_object()
 

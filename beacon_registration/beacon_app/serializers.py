@@ -157,6 +157,7 @@ class LocationSerializer(serializers.Serializer):
 class FriendRequestSerializer(serializers.Serializer):
     from_user_username = serializers.CharField(source='user.username')
     from_user_nickname = serializers.CharField(source='nickname')
+    created_at = serializers.DateTimeField()
 
 
 class FriendsSerializer(serializers.Serializer):

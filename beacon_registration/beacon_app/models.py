@@ -47,7 +47,6 @@ class Student(models.Model):
     """
     user = models.OneToOneField(User, unique=True)
     date_registered = models.DateField(null=False, blank=False, auto_now_add=True)
-    date_registered.editable = True
 
     nickname = models.CharField(null=False, blank=False, unique=True, max_length=20)
 
@@ -199,6 +198,7 @@ class Friendship(models.Model):
     initiating_student = models.ForeignKey(Student, null=False, blank=False, related_name='initiated_friendships')
     receiving_student = models.ForeignKey(Student, null=False, blank=False, related_name='received_friendships')
     accepted = models.BooleanField(default=False, null=False, blank=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return "Friendship from {} to {}, accepted={}".format(self.initiating_student,
