@@ -301,12 +301,10 @@ class FriendViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.Creat
         friend_requests = []
         for friendship in Friendship.objects.filter(Q(initiating_student=student) | Q(receiving_student=student)):
             if not friendship.accepted and friendship.receiving_student == student:
-                friend_requests.append(friendship.initiating_student if friendship.receiving_student == student
-                                       else friendship.receiving_student)
+                friend_requests.append({'friend': friendship.initiating_student if friendship.receiving_student == student
+                                        else friendship.receiving_student, 'created_at': friendship.created_at})
 
-        serializer = FriendRequestSerializer(friend_requests, many=True)
-
-        return Response(serializer.data)
+        return Response(friend_requests)
 
     def create(self, request, *args, **kwargs):
         student = self.get_object()
