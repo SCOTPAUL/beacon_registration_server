@@ -150,7 +150,6 @@ def create_fake_student_relations(attendance_aim=None):
         print("Attendance Aim: {}".format(attendance_aim))
 
 
-
 class Command(BaseCommand):
     help = 'Adds fake data for fake users'
 

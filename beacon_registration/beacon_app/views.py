@@ -43,6 +43,12 @@ class BuildingViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = BuildingSerializer
 
 
+class RoomViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = ()
+    queryset = Room.objects.all()
+    serializer_class = NestedRoomSerializer
+
+
 class AccountsViewSet(viewsets.ViewSet):
     """
     Contains the views for accounts

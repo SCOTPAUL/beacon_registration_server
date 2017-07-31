@@ -20,6 +20,21 @@ class RoomSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('room_code', 'beacons', 'building')
 
 
+class NestedBeaconSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Beacon
+        fields = ('uuid', 'major', 'minor', 'date_added')
+
+
+class NestedRoomSerializer(serializers.ModelSerializer):
+    beacons = NestedBeaconSerializer(many=True, read_only=True)
+    building_name = serializers.CharField(source='building.name')
+
+    class Meta:
+        model = Room
+        fields = ('id', 'room_code', 'building_name', 'beacons')
+
+
 class BeaconSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Beacon
