@@ -247,6 +247,7 @@ class Room(models.Model):
     """
     Represents a room in a building
     """
+    room_id = models.CharField(max_length=20, unique=True, null=False, blank=False)
     building = models.ForeignKey('Building', null=False, blank=False, related_name='rooms')
     room_code = models.CharField(max_length=140)
     fake = models.BooleanField(default=False)

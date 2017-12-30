@@ -46,7 +46,7 @@ def parse_events(events: EventsJson) -> List[Event]:
 
         return ' '.join(names)
 
-    keys_and_transforms = [('room', split_room), ('course', identity), ('start', make_time), ('end', make_time),
+    keys_and_transforms = [('room', split_room), ('roomid', identity), ('course', identity), ('start', make_time), ('end', make_time),
                            ('date', make_date), ('lecturer', parse_name)]
 
     parsed_events = []
@@ -116,7 +116,7 @@ def get_or_create_meetings(json_data: List[Dict], student: Student):
 
                 if instance['room'] is not None:
                     building = Building.objects.get_or_create(name=instance['room'][0])[0]
-                    room = Room.objects.get_or_create(building=building, room_code=instance['room'][1])[0]
+                    room = Room.objects.get_or_create(room_id=instance['roomid'], building=building, room_code=instance['room'][1])[0]
                 else:
                     room = None
 

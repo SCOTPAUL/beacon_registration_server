@@ -222,6 +222,7 @@ class TimetableSerializer(serializers.Serializer):
     room_has_beacon = serializers.BooleanField(source='had_beacon', read_only=True)
     room_name = serializers.CharField(source='room.room_code', read_only=True)
     building_name = serializers.CharField(source='room.building', read_only=True)
+    room_id = serializers.CharField(source='room.room_id', read_only=True)
     lecturer = serializers.CharField(read_only=True)
     self = serializers.HyperlinkedIdentityField(view_name='meetinginstance-detail', read_only=True)
 
