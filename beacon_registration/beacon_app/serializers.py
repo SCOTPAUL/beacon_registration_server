@@ -17,7 +17,7 @@ class BuildingSerializer(serializers.HyperlinkedModelSerializer):
 class RoomSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Room
-        fields = ('room_code', 'beacons', 'building')
+        fields = ('room_code', 'room_id', 'beacons', 'building')
 
 
 class NestedBeaconSerializer(serializers.ModelSerializer):
@@ -32,7 +32,7 @@ class NestedRoomSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Room
-        fields = ('id', 'room_code', 'building_name', 'beacons')
+        fields = ('id', 'room_id', 'room_code', 'building_name', 'beacons')
 
 
 class BeaconSerializer(serializers.HyperlinkedModelSerializer):
